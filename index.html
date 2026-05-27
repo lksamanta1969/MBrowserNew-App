@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>M Browser</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:#f1f1f1;
+overflow:hidden;
+}
+
+/* Top Area */
+
+.header{
+background:#b45309;
+padding:8px;
+}
+
+/* Tabs */
+
+.tabs{
+display:flex;
+align-items:center;
+margin-bottom:8px;
+}
+
+.tab{
+background:#f5d7aa;
+border:none;
+padding:10px 20px;
+border-radius:12px 12px 0 0;
+font-size:14px;
+}
+
+.addtab{
+margin-left:5px;
+border:none;
+background:transparent;
+font-size:24px;
+color:white;
+}
+
+/* Toolbar */
+
+.topbar{
+background:#92400e;
+padding:10px;
+display:flex;
+align-items:center;
+gap:8px;
+border-radius:10px;
+}
+
+.topbar button{
+height:40px;
+border:none;
+border-radius:20px;
+padding:0 15px;
+cursor:pointer;
+}
+
+#url{
+flex:1;
+height:40px;
+border:none;
+border-radius:25px;
+padding:0 20px;
+font-size:16px;
+}
+
+/* Home Page */
+
+.home{
+text-align:center;
+padding-top:100px;
+}
+
+.home h1{
+font-size:80px;
+color:#4285f4;
+margin:0;
+}
+
+.home p{
+font-size:24px;
+color:#555;
+}
+
+#homesearch{
+width:500px;
+max-width:80%;
+padding:15px;
+border:none;
+border-radius:30px;
+font-size:18px;
+margin-top:20px;
+}
+
+/* Browser */
+
+webview{
+width:100%;
+height:calc(100vh - 140px);
+display:none;
+position:relative;
+z-index:1;
+}
+
+/* NEW EFFECTS */
+
+*{
+box-sizing:border-box;
+transition:0.2s;
+}
+
+.topbar button:hover{
+transform:scale(1.05);
+}
+
+#url:focus{
+outline:none;
+box-shadow:0 0 8px rgba(255,255,255,0.5);
+}
+
+#homesearch:focus{
+outline:none;
+box-shadow:0 0 12px rgba(0,0,0,0.15);
+}
+
+.tab:hover{
+background:#ffe7c2;
+}
+.apps-menu{
+
+position:absolute;
+top:85px;
+right:20px;
+background:white;
+padding:15px;
+border-radius:20px;
+box-shadow:0 5px 20px rgba(0,0,0,0.2);
+
+display:none;
+flex-direction:column;
+gap:10px;
+
+z-index:999999;
+position:fixed;
+
+}
+
+.app{
+padding:12px;
+border-radius:10px;
+cursor:pointer;
+font-size:20px;
+}
+
+.app:hover{
+background:#f1f1f1;
+}
+</style>
+</head>
+
+<body>
+  <body>
+    <div class="apps-menu" id="appsMenu">
+
+      <div class="app" onclick="openMMail();toggleApps()">
+      📧 MMail
+      </div>
+      
+      <div class="app" onclick="openMNotes();toggleApps()">
+      📝 MNotes
+      </div>
+      
+      <div class="app" onclick="openMTube();toggleApps()">
+      📺 MTube
+      </div>
+      
+      <div class="app" onclick="openMDrive();toggleApps()">
+      📁 MDrive
+      </div>
+      
+      <div class="app" onclick="openMCalendar();toggleApps()">
+      🗓️ MCalendar
+      </div>
+      
+      </div>    
+      
+<!-- Header -->
+
+<div class="header">
+
+  <div class="tabs">
+
+    <div class="tab active">
+    New Tab
+    <span onclick="closeTab(this)">×</span>
+    </div>
+    
+    <button class="addtab" onclick="newTab()">+</button>
+    
+    </div>
+
+<div class="topbar">
+
+<button onclick="goBack()">←</button>
+
+<button onclick="goForward()">→</button>
+
+<button onclick="refreshPage()">⟳</button>
+
+<input id="url"
+placeholder="Search or Enter URL"
+onkeypress="if(event.key==='Enter'){loadSite()}">
+<button onclick="toggleApps()">⣿</button>
+<button onclick="loadSite()">Go</button>
+
+</div>
+
+</div>
+
+<!-- Home -->
+
+<div class="home" id="home">
+<div id="appScreen"></div>
+<h1>MBrowser</h1>
+
+<p>Search Anything</p>
+
+<input
+id="homesearch"
+placeholder="Search Google or type a URL"
+onkeydown="homeSearch(event)">
+
+</div>
+
+<!-- Browser -->
+
+<webview
+id="browser"
+src="">
+</webview>
+
+<script>
+function openMNotes(){
+
+document.getElementById("home").innerHTML=`
+
+<h1 style="color:#b45309;">📝 MNotes</h1>
+
+<p>My Notes App Coming Soon</p>
+
+`;
+
+}
+
+function openMTube(){
+
+document.getElementById("home").innerHTML=`
+
+<h1 style="color:#b45309;">📺 MTube</h1>
+
+<p>My Video Platform Coming Soon</p>
+
+`;
+
+}
+
+function openMDrive(){
+
+document.getElementById("home").innerHTML=`
+
+<h1 style="color:#b45309;">📁 MDrive</h1>
+
+<p>Cloud Storage Coming Soon</p>
+
+`;
+
+}
+
+function openMCalendar(){
+
+document.getElementById("home").innerHTML=`
+
+<h1 style="color:#b45309;">📅 MCalendar</h1>
+
+<p>Calendar System Coming Soon</p>
+
+`;
+
+} 
+
+function openMMail(){
+
+document.getElementById("home").innerHTML=`
+
+<div style="
+padding:30px;
+height:100%;
+display:flex;
+font-family:Arial;
+">
+
+<!-- Sidebar -->
+
+<div style="
+width:220px;
+background:white;
+border-radius:20px;
+padding:20px;
+box-shadow:0 5px 15px rgba(0,0,0,0.1);
+">
+
+<h2 style="color:#b45309;">
+📧 MMail
+</h2>
+<div style="margin-top:15px;display:flex;gap:10px;">
+
+<button onclick="showSignIn()" style="
+flex:1;
+padding:10px;
+border:none;
+border-radius:10px;
+background:#2563eb;
+color:white;
+cursor:pointer;
+">
+Sign In
+</button>
+
+<button onclick="showSignUp()" style="
+flex:1;
+padding:10px;
+border:none;
+border-radius:10px;
+background:#16a34a;
+color:white;
+cursor:pointer;
+">
+Sign Up
+</button>
+
+</div>
+<button style="
+width:100%;
+padding:12px;
+border:none;
+border-radius:12px;
+background:#b45309;
+color:white;
+font-size:16px;
+margin-top:20px;
+cursor:pointer;
+">
+➕ Compose
+</button>
+
+<div style="margin-top:30px;line-height:40px;">
+
+<div>📥 Inbox</div>
+<div>⭐ Starred</div>
+<div>📤 Sent</div>
+<div>🗑 Trash</div>
+
+</div>
+
+</div>
+
+<!-- Mail Area -->
+
+<div style="
+flex:1;
+margin-left:20px;
+background:white;
+border-radius:20px;
+padding:25px;
+box-shadow:0 5px 15px rgba(0,0,0,0.1);
+overflow:auto;
+">
+
+<h2>Inbox</h2>
+
+<div style="
+padding:15px;
+border-bottom:1px solid #ddd;
+cursor:pointer;
+">
+
+<b>Welcome to MMail</b>
+
+<p style="color:gray;">
+Your private mail system is now active.
+</p>
+
+</div>
+
+<div style="
+padding:15px;
+border-bottom:1px solid #ddd;
+cursor:pointer;
+">
+
+<b>M Browser Team</b>
+
+<p style="color:gray;">
+New updates coming soon...
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+`;
+
+}
+function showSignIn(){
+
+document.getElementById("mailContent").innerHTML=`
+
+<h1>🔐 Sign In</h1>
+
+<input id="loginEmail"
+placeholder="Email"
+style="
+width:100%;
+padding:12px;
+margin-top:20px;
+border-radius:10px;
+border:1px solid #ccc;
+">
+
+<input id="loginPass"
+type="password"
+placeholder="Password"
+style="
+width:100%;
+padding:12px;
+margin-top:15px;
+border-radius:10px;
+border:1px solid #ccc;
+">
+
+<button onclick="loginUser()" style="
+margin-top:20px;
+padding:12px 20px;
+border:none;
+border-radius:10px;
+background:#2563eb;
+color:white;
+cursor:pointer;
+">
+Login
+</button>
+
+`;
+
+}
+
+function showSignUp(){
+
+document.getElementById("mailContent").innerHTML=`
+
+<h1>📝 Sign Up</h1>
+
+<input id="signupName"
+placeholder="Name"
+style="
+width:100%;
+padding:12px;
+margin-top:20px;
+border-radius:10px;
+border:1px solid #ccc;
+">
+
+<input id="signupEmail"
+placeholder="Email"
+style="
+width:100%;
+padding:12px;
+margin-top:15px;
+border-radius:10px;
+border:1px solid #ccc;
+">
+
+<input id="signupPass"
+type="password"
+placeholder="Password"
+style="
+width:100%;
+padding:12px;
+margin-top:15px;
+border-radius:10px;
+border:1px solid #ccc;
+">
+
+<button onclick="createAccount()" style="
+margin-top:20px;
+padding:12px 20px;
+border:none;
+border-radius:10px;
+background:#16a34a;
+color:white;
+cursor:pointer;
+">
+Create Account
+</button>
+
+`;
+
+}
+
+function createAccount(){
+
+let name=document.getElementById("signupName").value;
+let email=document.getElementById("signupEmail").value;
+
+if(name==="" || email===""){
+
+alert("Fill all fields");
+return;
+
+}
+
+alert("Account Created Successfully");
+
+showInbox();
+
+}
+
+function loginUser(){
+
+let email=document.getElementById("loginEmail").value;
+
+if(email===""){
+
+alert("Enter email");
+return;
+
+}
+
+alert("Login Successful");
+
+showInbox();
+
+}
+function showInbox(){
+
+document.getElementById("mailContent").innerHTML=`
+
+<h1>📥 Inbox</h1>
+
+<div style="
+padding:15px;
+border-bottom:1px solid #ddd;
+">
+
+<b>Welcome to MMail</b>
+
+<p style="color:gray;">
+Your mail system is active.
+</p>
+
+</div>
+
+`;
+
+}
+
+function showDrafts(){
+
+document.getElementById("mailContent").innerHTML=`
+
+<h1>📝 Drafts</h1>
+
+<p>No drafts available.</p>
+
+`;
+
+}
+
+function showSent(){
+
+document.getElementById("mailContent").innerHTML=`
+
+<h1>📤 Sent Mail</h1>
+
+<p>No sent mails yet.</p>
+
+`;
+
+}
+
+function showTrash(){
+
+document.getElementById("mailContent").innerHTML=`
+
+<h1>🗑 Trash</h1>
+
+<p>Trash is empty.</p>
+
+`;
+
+}
+
+function showCompose(){
+
+document.getElementById("mailContent").innerHTML=`
+
+<h1>✉ Compose Mail</h1>
+
+<input id="toMail"
+placeholder="To"
+style="
+width:100%;
+padding:12px;
+margin-top:15px;
+border:1px solid #ccc;
+border-radius:10px;
+font-size:16px;
+">
+
+<input id="subjectMail"
+placeholder="Subject"
+style="
+width:100%;
+padding:12px;
+margin-top:15px;
+border:1px solid #ccc;
+border-radius:10px;
+font-size:16px;
+">
+
+<textarea id="bodyMail"
+placeholder="Write your message..."
+style="
+width:100%;
+height:250px;
+padding:15px;
+margin-top:15px;
+border:1px solid #ccc;
+border-radius:10px;
+font-size:16px;
+resize:none;
+"></textarea>
+
+<button onclick="sendMail()" style="
+margin-top:20px;
+padding:14px 25px;
+border:none;
+border-radius:12px;
+background:#b45309;
+color:white;
+font-size:17px;
+cursor:pointer;
+">
+📤 Send Mail
+</button>
+
+`;
+
+}
+
+function sendMail(){
+
+let to=document.getElementById("toMail").value;
+
+let subject=document.getElementById("subjectMail").value;
+
+if(to==="" || subject===""){
+
+alert("Please fill all fields");
+
+return;
+
+}
+
+document.getElementById("mailContent").innerHTML=`
+
+<h1>📤 Sent Successfully</h1>
+
+<div style="
+padding:20px;
+background:#f1f5f9;
+border-radius:15px;
+margin-top:20px;
+">
+
+<p><b>To:</b> ${to}</p>
+
+<p><b>Subject:</b> ${subject}</p>
+
+<p>Your mail has been sent.</p>
+
+</div>
+
+`;
+
+}
+const browser=document.getElementById("browser");
+
+/* Load Website */
+
+function loadSite(){
+
+let url=document.getElementById("url").value.trim();
+
+if(url===""){
+return;
+}
+
+if(
+!url.startsWith("http://") &&
+!url.startsWith("https://")
+){
+
+if(url.includes(".")){
+
+url="https://" + url;
+
+}else{
+
+url="https://www.google.com/search?q=" + encodeURIComponent(url);
+
+}
+
+}
+
+let browser=document.getElementById("browser");
+
+browser.style.display="flex";
+
+document.getElementById("home").style.display="none";
+
+document.getElementById("appScreen").innerHTML="";
+
+browser.src=url;
+
+}
+
+/* Back */
+
+function goForward(){
+
+let browser=document.getElementById("browser");
+
+if(browser.canGoForward()){
+browser.goForward();
+}
+
+}
+
+/* Refresh */
+
+function refreshPage(){
+
+browser.reload();
+
+}
+
+/* Update URL */
+
+browser.addEventListener("did-navigate",(e)=>{
+
+document.getElementById("url").value=e.url;
+
+});
+
+/* New Tab */
+
+function newTab(){
+
+browser.src="";
+
+browser.style.display="none";
+
+document.getElementById("url").value="";
+
+document.getElementById("home").style.display="block";
+
+}
+
+/* Home Search */
+
+function homeSearch(event){
+
+if(event.key==="Enter"){
+
+let text=document.getElementById("homesearch").value;
+
+document.getElementById("url").value=text;
+
+loadSite();
+
+}
+
+}
+
+function toggleApps(){
+
+let menu=document.getElementById("appsMenu");
+
+if(menu.style.display==="flex"){
+
+menu.style.display="none";
+
+}else{
+
+menu.style.display="flex";
+
+}
+
+}
+function openApp(url){
+
+browser.src=url;
+
+document.getElementById("home").style.display="none";
+
+browser.style.display="flex";
+
+document.getElementById("appsMenu").style.display="none";
+
+}
+function newTab(){
+
+let tabs=document.querySelector(".tabs");
+
+let div=document.createElement("div");
+
+div.className="tab";
+
+div.innerHTML=`
+New Tab
+<span onclick="closeTab(this)">×</span>
+`;
+
+div.onclick=function(){
+
+document.querySelectorAll(".tab").forEach(t=>{
+t.classList.remove("active");
+});
+
+div.classList.add("active");
+
+};
+
+tabs.insertBefore(div,tabs.lastElementChild);
+
+}
+
+function closeTab(element){
+
+element.parentElement.remove();
+
+}
+</script>
+
+</body>
+</html>
