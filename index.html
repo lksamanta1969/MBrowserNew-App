@@ -135,22 +135,21 @@ box-shadow:0 0 12px rgba(0,0,0,0.15);
 background:#ffe7c2;
 }
 .apps-menu{
-
-position:absolute;
+display:none;
+position:fixed;
 top:85px;
 right:20px;
+
 background:white;
 padding:15px;
+
 border-radius:20px;
 box-shadow:0 5px 20px rgba(0,0,0,0.2);
 
-display:none;
 flex-direction:column;
 gap:10px;
 
 z-index:999999;
-position:fixed;
-
 }
 
 .app{
@@ -253,37 +252,37 @@ Close
 
 <input type="password" id="signinPassword" placeholder="Password">
 
-<button onclick="loginAccount()">Login</button>
+<button onclick="loginUser(); closePopup()">Login</button>
 
 <button onclick="closePopup()">Close</button>
 
 </div>
 
+</div>  
+
+      <div class="apps-menu" id="appsMenu">
+
+<div class="app" onclick="openMMail();toggleApps()">
+📧 MMail
 </div>
 
-    <div class="apps-menu" id="appsMenu">
+<div class="app" onclick="openMNotes();toggleApps()">
+📝 MNotes
+</div>
 
-      <div class="app" onclick="openMMail();toggleApps()">
-      📧 MMail
-      </div>
-      
-      <div class="app" onclick="openMNotes();toggleApps()">
-      📝 MNotes
-      </div>
-      
-      <div class="app" onclick="openMTube();toggleApps()">
-      📺 MTube
-      </div>
-      
-      <div class="app" onclick="openMDrive();toggleApps()">
-      📁 MDrive
-      </div>
-      
-      <div class="app" onclick="openMCalendar();toggleApps()">
-      🗓️ MCalendar
-      </div>
-      
-      </div>    
+<div class="app" onclick="openMTube();toggleApps()">
+📺 MTube
+</div>
+
+<div class="app" onclick="openMDrive();toggleApps()">
+📁 MDrive
+</div>
+
+<div class="app" onclick="openMCalendar();toggleApps()">
+🗓️ MCalendar
+</div>
+
+</div>    
       
 <!-- Header -->
 
@@ -337,7 +336,12 @@ onkeydown="homeSearch(event)">
 
 <webview
 id="browser"
-src="">
+src=""
+style="
+width:100%;
+height:100vh;
+display:none;
+">
 </webview>
 
 <script>
@@ -469,7 +473,7 @@ cursor:pointer;
 
 <!-- Mail Area -->
 
-<div style="
+<div id="mailContent" style="
 flex:1;
 margin-left:20px;
 background:white;
@@ -543,7 +547,7 @@ border-radius:10px;
 border:1px solid #ccc;
 ">
 
-<button onclick="loginUser()" style="
+<button onclick="loginUser(); closePopup()" style="
 margin-top:20px;
 padding:12px 20px;
 border:none;
@@ -567,61 +571,6 @@ document.getElementById("signupPopup").style.display="none";
 document.getElementById("signinPopup").style.display="none";
 }
 
-function closePopup(){
-document.getElementById("signupPopup").style.display="none";
-document.getElementById("signinPopup").style.display="none";
-}
-document.getElementById("mailContent").innerHTML=`
-
-<h1>📝 Sign Up</h1>
-
-<input id="signupName"
-placeholder="Name"
-style="
-width:100%;
-padding:12px;
-margin-top:20px;
-border-radius:10px;
-border:1px solid #ccc;
-">
-
-<input id="signupEmail"
-placeholder="Email"
-style="
-width:100%;
-padding:12px;
-margin-top:15px;
-border-radius:10px;
-border:1px solid #ccc;
-">
-
-<input id="signupPass"
-type="password"
-placeholder="Password"
-style="
-width:100%;
-padding:12px;
-margin-top:15px;
-border-radius:10px;
-border:1px solid #ccc;
-">
-
-<button onclick="createAccount();document.getElementById('signupPopup').style.display='none'" style="
-margin-top:20px;
-padding:12px 20px;
-border:none;
-border-radius:10px;
-background:#16a34a;
-color:white;
-cursor:pointer;
-">
-Create Account
-</button>
-
-`;
-
-}
-
 function createAccount(){
 
 let name=document.getElementById("signupName").value;
@@ -642,16 +591,23 @@ showInbox();
 
 function loginUser(){
 
-let email=document.getElementById("loginEmail").value;
+let email=document.getElementById("signinEmail").value;
 
-if(email===""){
+let pass=document.getElementById("signinPassword").value;
 
-alert("Enter email");
+if(email==="" || pass===""){
+
+alert("Enter Email & Password");
+
 return;
 
 }
 
+document.getElementById("signinPopup").style.display="none";
+
 alert("Login Successful");
+
+openMMail();
 
 showInbox();
 
@@ -693,13 +649,45 @@ document.getElementById("mailContent").innerHTML=`
 
 function showSent(){
 
-document.getElementById("mailContent").innerHTML=`
+let html=`
+<h1 style="font-size:70px;color:#4f6ee8;">
+📤 Sent Mail
+</h1>
+`;
 
-<h1>📤 Sent Mail</h1>
+if(sentMails.length===0){
 
-<p>No sent mails yet.</p>
+html+=`<p>No sent mails yet.</p>`;
+
+}else{
+
+sentMails.forEach(mail=>{
+
+html+=`
+
+<div style="
+padding:20px;
+border-bottom:1px solid #ddd;
+line-height:35px;
+">
+
+<p><b>To:</b> ${mail.to}</p>
+
+<p><b>CC:</b> ${mail.cc || "None"}</p>
+
+<p><b>Subject:</b> ${mail.subject}</p>
+
+<p>${mail.body}</p>
+
+</div>
 
 `;
+
+});
+
+}
+
+document.getElementById("mailContent").innerHTML=html;
 
 }
 
@@ -731,7 +719,16 @@ border:1px solid #ccc;
 border-radius:10px;
 font-size:16px;
 ">
-
+<input id="ccMail"
+placeholder="CC"
+style="
+width:100%;
+padding:12px;
+margin-top:15px;
+border:1px solid #ccc;
+border-radius:10px;
+font-size:16px;
+">
 <input id="subjectMail"
 placeholder="Subject"
 style="
@@ -757,16 +754,16 @@ resize:none;
 "></textarea>
 
 <button onclick="sendMail()" style="
-margin-top:20px;
-padding:14px 25px;
+margin-top:25px;
+padding:15px 40px;
 border:none;
-border-radius:12px;
+border-radius:15px;
 background:#b45309;
 color:white;
-font-size:17px;
+font-size:22px;
 cursor:pointer;
 ">
-📤 Send Mail
+📬 Send Mail
 </button>
 
 `;
@@ -777,7 +774,11 @@ function sendMail(){
 
 let to=document.getElementById("toMail").value;
 
+let cc=document.getElementById("ccMail").value;
+
 let subject=document.getElementById("subjectMail").value;
+
+let body=document.getElementById("bodyMail").value;
 
 if(to==="" || subject===""){
 
@@ -787,22 +788,35 @@ return;
 
 }
 
+sentMails.push({
+to,
+cc,
+subject,
+body
+});
+
 document.getElementById("mailContent").innerHTML=`
 
-<h1>📤 Sent Successfully</h1>
+<h1 style="font-size:70px;color:#4f6ee8;">
+📤 Sent Successfully
+</h1>
 
 <div style="
-padding:20px;
+padding:25px;
 background:#f1f5f9;
-border-radius:15px;
+border-radius:20px;
 margin-top:20px;
+line-height:40px;
+font-size:22px;
 ">
 
 <p><b>To:</b> ${to}</p>
 
+<p><b>CC:</b> ${cc || "None"}</p>
+
 <p><b>Subject:</b> ${subject}</p>
 
-<p>Your mail has been sent.</p>
+<p><b>Message:</b> ${body}</p>
 
 </div>
 
@@ -812,7 +826,17 @@ margin-top:20px;
 const browser=document.getElementById("browser");
 
 /* Load Website */
+function goBack(){
 
+let browser=document.getElementById("browser");
+
+if(browser.canGoBack()){
+
+browser.goBack();
+
+}
+
+}
 function loadSite(){
 
 let url=document.getElementById("url").value.trim();
@@ -842,11 +866,9 @@ let browser=document.getElementById("browser");
 
 browser.style.display="flex";
 
-document.getElementById("home").style.display="none";
-
-document.getElementById("appScreen").innerHTML="";
-
 browser.src=url;
+
+document.getElementById("home").style.display="none";
 
 }
 
@@ -913,51 +935,28 @@ function toggleApps(){
 let menu=document.getElementById("appsMenu");
 
 if(menu.style.display==="flex"){
-
 menu.style.display="none";
-
 }else{
-
 menu.style.display="flex";
-
 }
 
 }
-function openApp(url){
 
-browser.src=url;
-
-document.getElementById("home").style.display="none";
-
-browser.style.display="flex";
+window.onload=function(){
 
 document.getElementById("appsMenu").style.display="none";
 
 }
-function newTab(){
 
-let tabs=document.querySelector(".tabs");
+function openApp(url){
 
-let div=document.createElement("div");
+let browser=document.getElementById("browser");
 
-div.className="tab";
+browser.loadURL(url);
 
-div.innerHTML=`
-New Tab
-<span onclick="closeTab(this)">×</span>
-`;
+document.getElementById("home").style.display="none";
 
-div.onclick=function(){
-
-document.querySelectorAll(".tab").forEach(t=>{
-t.classList.remove("active");
-});
-
-div.classList.add("active");
-
-};
-
-tabs.insertBefore(div,tabs.lastElementChild);
+browser.style.display="flex";
 
 }
 
