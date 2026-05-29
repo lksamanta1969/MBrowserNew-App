@@ -2,12 +2,14 @@
   "name": "mbrowsernew",
   "version": "1.0.0",
   "main": "main.js",
-
   "scripts": {
     "start": "electron ."
   },
-
   "devDependencies": {
     "electron": "^30.0.0"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "firebase": "^12.14.0"
   }
 }
