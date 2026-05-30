@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "express": "^5.2.1",
-    "firebase": "^12.14.0"
+    "firebase": "^12.14.0",
+    "imap": "^0.8.19",
+    "mailparser": "^3.9.9"
   }
 }

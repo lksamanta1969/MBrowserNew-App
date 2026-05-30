@@ -392,6 +392,10 @@ display:none;
 </webview>
 
 <script>
+
+ let sentMails = [];
+let draftMails = [];
+
 function openMNotes(){
 
 document.getElementById("home").innerHTML=`
@@ -659,41 +663,95 @@ openMMail();
 showInbox();
 
 }
-function showInbox(){
 
-document.getElementById("mailContent").innerHTML=`
 
-<h1>📥 Inbox</h1>
+document.getElementById("mailContent").innerHTML = html;
 
+
+async function showInbox(){
+
+const response = await fetch("http://localhost:3000/syncInbox");
+
+const inboxMails = await response.json();
+
+let html = `<h1>📥 Inbox</h1>`;
+
+if(inboxMails.length===0){
+
+html += `<p>No mails found.</p>`;
+
+}else{
+
+inboxMails.forEach(mail=>{
+
+html += `
 <div style="
 padding:15px;
+margin-bottom:10px;
 border-bottom:1px solid #ddd;
 ">
-
-<b>Welcome to MMail</b>
-
-<p style="color:gray;">
-Your mail system is active.
-</p>
-
+<b>From:</b> ${mail.from}<br><br>
+<b>Subject:</b> ${mail.subject}<br><br>
+${mail.msg}
 </div>
-
 `;
+
+});
 
 }
 
-function showDrafts(){
-
-document.getElementById("mailContent").innerHTML=`
-
-<h1>📝 Drafts</h1>
-
-<p>No drafts available.</p>
-
-`;
+document.getElementById("mailContent").innerHTML = html;
 
 }
 
+async function showDrafts(){
+
+  let drafts = await fetch("http://localhost:3000/draft")
+  .then(r => r.json());
+
+  let html = `
+  <h1>📝 Drafts</h1>
+  `;
+
+  if(drafts.length===0){
+
+    html += `<p>No drafts available.</p>`;
+
+  }else{
+
+    drafts.forEach((mail,index)=>{
+
+      html += `
+      <div style="border:1px solid #ccc;padding:10px;margin:10px;border-radius:10px;">
+        <b>To:</b> ${mail.to}<br>
+        <b>Subject:</b> ${mail.subject}<br>
+        <b>Message:</b> ${mail.msg}<br><br>
+
+        <button onclick="deleteDraft(${index})">
+          Delete
+        </button>
+      </div>
+      `;
+    });
+
+  }
+
+  document.getElementById("mailContent").innerHTML = html;
+
+}
+async function deleteDraft(index){
+
+  await fetch("http://localhost:3000/deleteDraft",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({index})
+  });
+
+  showDrafts();
+
+}
 function showSent(){
 
 let html=`
@@ -727,14 +785,11 @@ line-height:35px;
 <p>${mail.body}</p>
 
 </div>
-
 `;
 
 });
-
 }
-
-document.getElementById("mailContent").innerHTML=html;
+document.getElementById("mailContent").innerHTML = html;
 
 }
 
@@ -817,7 +872,8 @@ cursor:pointer;
 
 }
 
-function sendMail(){
+
+async function sendMail(){
 
 let to=document.getElementById("toMail").value;
 
@@ -827,13 +883,41 @@ let subject=document.getElementById("subjectMail").value;
 
 let body=document.getElementById("bodyMail").value;
 
-if(to==="" || subject===""){
+try{
 
-alert("Please fill all fields");
+
+const response = await fetch("http://localhost:3000/send",{
+  method:"POST",
+  headers:{
+    "Content-Type":"application/json"
+  },
+  body:JSON.stringify({
+    to,
+    cc,
+    subject,
+    msg:body
+  })
+});
+
+const result = await response.text();
+
+console.log("Server Response:", result);
+
+if(!response.ok){
+  alert(result);
+  return;
+}
+
+}catch(err){
+
+alert("Mail sending failed");
+
+console.log(err);
 
 return;
 
 }
+
 
 sentMails.push({
 to,
