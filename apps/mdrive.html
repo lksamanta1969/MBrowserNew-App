@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MDrive</title>
+
+<style>
+body{
+    font-family:Arial;
+    background:#f3f4f6;
+    padding:40px;
+}
+
+h1{
+    color:#b45309;
+}
+
+button{
+    padding:12px 20px;
+    border:none;
+    border-radius:10px;
+    background:#b45309;
+    color:white;
+    cursor:pointer;
+}
+
+#fileList{
+    margin-top:20px;
+}
+
+.fileItem{
+    background:white;
+    padding:10px;
+    margin-bottom:10px;
+    border-radius:10px;
+}
+</style>
+
+</head>
+<body>
+
+<h1>📁 MDrive</h1>
+
+<input type="file" id="fileInput">
+
+<button onclick="saveFile()">
+Upload
+</button>
+<button onclick="createFolder()">
+New Folder
+</button>
+
+<div id="fileList"></div>
+
+<script>
+alert("MDrive Loaded");
+let files =
+JSON.parse(localStorage.getItem("mdriveFiles") || "[]");
+
+let folders =
+JSON.parse(localStorage.getItem("mdriveFolders") || "[]");
+
+function createFolder(){
+
+let folderName =
+prompt("Folder Name");
+
+if(!folderName){
+    return;
+}
+
+folders.push(folderName);
+
+localStorage.setItem(
+    "mdriveFolders",
+    JSON.stringify(folders)
+);
+
+showFiles();
+
+}
+
+async function saveFile(){
+alert(typeof window.electronAPI);
+
+  let input =
+  document.getElementById("fileInput");
+
+  if(input.files.length===0){
+    alert("Select a file");
+    return;
+  }
+
+  let file =
+  input.files[0];
+
+alert(file.name);
+alert(file.path);
+
+console.log(file);
+alert("PATH = " + file.path);
+
+if (!file.path) {
+    alert("file.path is undefined");
+    return;
+}
+  let result =
+  await window.electronAPI.saveFile(
+    file.path
+  );
+console.log(result);
+alert(JSON.stringify(result));
+
+  files.push({
+    name: result.fileName,
+    path: result.path
+  });
+
+  localStorage.setItem(
+    "mdriveFiles",
+    JSON.stringify(files)
+  );
+
+  showFiles();
+
+  alert("File Saved");
+}
+
+showFiles();
+console.log(files);
+alert("File Saved");
+
+
+function showFiles(){
+
+let html="";
+
+folders.forEach(folder=>{
+
+html += `
+<div class="fileItem">
+📁 ${folder}
+</div>
+`;
+
+});
+
+files.forEach(file=>{
+
+html += `
+<div class="fileItem"
+onclick="window.open('file:///${file.path.replaceAll("\\","/")}')">
+📄 ${file.name}
+</div>
+`;
+
+});
+
+document.getElementById("fileList").innerHTML =
+html;
+
+
+}
+
+</script>
+
+</body>
+</html>

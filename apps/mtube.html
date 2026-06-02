@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MTube</title>
+
+<style>
+body{
+    margin:0;
+    padding:40px;
+    font-family:Arial;
+    background:#f3f4f6;
+}
+
+h1{
+    color:#b45309;
+}
+
+input{
+    width:80%;
+    padding:12px;
+    border-radius:10px;
+    border:1px solid #ccc;
+    font-size:16px;
+}
+
+button{
+    padding:12px 20px;
+    border:none;
+    border-radius:10px;
+    background:#b45309;
+    color:white;
+    cursor:pointer;
+}
+
+iframe{
+    width:100%;
+    height:600px;
+    border:none;
+    margin-top:20px;
+    border-radius:10px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>📺 MTube</h1>
+
+
+<input id="searchBox" placeholder="Search YouTube">
+
+<button onclick="openYoutube()">
+Search
+</button>
+
+
+
+<script>
+
+function openYoutube(){
+
+let q =
+document.getElementById("searchBox").value;
+
+window.location.href =
+"https://www.youtube.com/results?search_query="
++ encodeURIComponent(q);
+
+}
+
+</script>
+
+</body>
+</html>

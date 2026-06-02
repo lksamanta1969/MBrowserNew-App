@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MNotes</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f5f5f5;
+}
+
+.container{
+  padding:40px;
+}
+
+h1{
+  color:#b45309;
+}
+
+textarea{
+  width:100%;
+  height:400px;
+  padding:15px;
+  font-size:16px;
+  border:1px solid #ccc;
+  border-radius:10px;
+  resize:none;
+}
+
+button{
+  margin-top:15px;
+  padding:12px 25px;
+  background:#b45309;
+  color:white;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>📝 MNotes</h1>
+
+<textarea id="notes"></textarea>
+
+<br>
+
+<button onclick="saveNotes()">
+💾 Save Notes
+</button>
+
+</div>
+
+<script>
+
+document.getElementById("notes").value =
+localStorage.getItem("mnotes") || "";
+
+function saveNotes(){
+
+localStorage.setItem(
+"mnotes",
+document.getElementById("notes").value
+);
+
+alert("Notes Saved");
+
+}
+
+</script>
+
+</body>
+</html>

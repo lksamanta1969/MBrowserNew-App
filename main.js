@@ -1,4 +1,11 @@
-const { app, BrowserWindow } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  ipcMain
+} = require("electron");
+
+const fs = require("fs");
+const path = require("path");
 
 function createWindow() {
 
@@ -8,11 +15,12 @@ const win = new BrowserWindow({
     title: "MBrowser",
     icon: __dirname + "/mbrowser-logo.ico",
 
-    webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        webviewTag: true
-    }
+   webPreferences: {
+  preload: path.join(__dirname, "preload.js"),
+  contextIsolation: true,
+  nodeIntegration: false,
+  webviewTag: true
+} 
 });
 
 win.loadFile("index.html");
@@ -24,4 +32,30 @@ app.whenReady().then(() => {
 
 createWindow();
 
+});
+ipcMain.handle(
+  "save-file",
+  async (event, sourcePath) => {
+
+    const fileName =
+      path.basename(sourcePath);
+
+    const destPath =
+      path.join(
+        __dirname,
+        "mdrive",
+        fileName
+      );
+
+      
+    fs.copyFileSync(
+      sourcePath,
+      destPath
+    );
+
+    return {
+      success: true,
+      fileName,
+      path: destPath
+    };
 });

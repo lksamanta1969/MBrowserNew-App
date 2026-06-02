@@ -267,6 +267,83 @@ imap.connect();
 
 });
 
+/* MPAY GET */
+
+app.get("/mpay",(req,res)=>{
+
+const data =
+JSON.parse(
+fs.readFileSync(
+path.join(__dirname,"mpaydb.json"),
+"utf8"
+)
+);
+
+res.json(data);
+
+});
+/* MPAY SAVE BALANCE */
+
+app.post("/mpayBalance",(req,res)=>{
+
+let data = JSON.parse(
+fs.readFileSync(
+path.join(__dirname,"mpaydb.json"),
+"utf8"
+)
+);
+
+data.balance = req.body.balance;
+
+fs.writeFileSync(
+path.join(__dirname,"mpaydb.json"),
+JSON.stringify(data,null,2)
+);
+
+res.send("Balance Saved");
+
+});
+/* MPAY ADD MONEY */
+
+app.post("/mpayAddMoney",(req,res)=>{
+
+let data = JSON.parse(
+fs.readFileSync(
+path.join(__dirname,"mpaydb.json"),
+"utf8"
+)
+);
+
+data.balance += req.body.amount;
+
+data.transactions.push(
+"Added ₹" + req.body.amount
+);
+
+fs.writeFileSync(
+path.join(__dirname,"mpaydb.json"),
+JSON.stringify(data,null,2)
+);
+
+res.json(data);
+
+});
+
+/* MPAY HISTORY */
+
+app.get("/mpayHistory",(req,res)=>{
+
+let data = JSON.parse(
+fs.readFileSync(
+path.join(__dirname,"mpaydb.json"),
+"utf8"
+)
+);
+
+res.json(data.transactions);
+
+});
+
 app.listen(3000,()=>{
 
 console.log("SERVER RUNNING");
