@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>MCalendar</title>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+
+function openMCalendar(){
+
+const today = new Date();
+
+document.getElementById("app").innerHTML=`
+
+<h1 style="
+color:#b45309;
+text-align:center;
+font-size:72px;
+">
+📅 MCalendar
+</h1>
+
+<div style="
+max-width:700px;
+margin:auto;
+background:white;
+padding:25px;
+border-radius:20px;
+box-shadow:0 0 20px rgba(0,0,0,.15);
+text-align:center;
+">
+
+<h2>
+${today.toDateString()}
+</h2>
+
+<p style="
+font-size:22px;
+color:#555;
+">
+Current Time
+</p>
+
+<h1 id="clock">
+00:00:00
+</h1>
+
+</div>
+<hr style="margin:30px 0;">
+
+<h2 style="text-align:center;">
+📅 Monthly Calendar
+</h2>
+
+<div id="monthYear"></div>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(7,1fr);
+max-width:900px;
+margin:auto;
+font-weight:bold;
+margin-bottom:10px;
+">
+
+<div>Sun</div>
+<div>Mon</div>
+<div>Tue</div>
+<div>Wed</div>
+<div>Thu</div>
+<div>Fri</div>
+<div>Sat</div>
+
+</div>
+
+<div id="calendarGrid"
+style="
+display:grid;
+grid-template-columns:repeat(7,1fr);
+gap:10px;
+max-width:900px;
+margin:auto;
+">
+</div>
+
+<hr style="margin:30px 0;">
+
+<h2>📝 Add Event</h2>
+<input id="eventInput" placeholder="Enter Event">
+
+<button onclick="addEvent()">
+Add Event
+</button>
+
+<div id="eventList"></div>
+
+<hr>
+
+<h2>⏰ Reminder</h2>
+<input id="reminderInput" placeholder="Reminder">
+
+<button onclick="addReminder()">
+Add Reminder
+</button>
+
+<div id="reminderList"></div>
+
+<hr>
+
+<h2>🎂 Birthday Reminder</h2>
+<input id="birthdayInput" placeholder="Birthday">
+
+<button onclick="addBirthday()">
+Add Birthday
+</button>
+
+<div id="birthdayList"></div>
+
+<hr>
+
+<h2>📅 Meeting Schedule</h2>
+<input id="meetingInput" placeholder="Meeting">
+
+<button onclick="addMeeting()">
+Add Meeting
+</button>
+
+<div id="meetingList"></div>
+
+<hr>
+
+<h2>✅ To-Do List</h2>
+<input id="todoInput" placeholder="New Task">
+
+<button onclick="addTodo()">
+Add Task
+</button>
+
+<div id="todoList"></div>
+
+`;
+
+setInterval(()=>{
+
+const now = new Date();
+
+document.getElementById("clock").innerHTML =
+now.toLocaleTimeString();
+
+},1000);
+
+document.getElementById("monthYear").innerHTML =
+today.toLocaleString("default",{
+month:"long"
+}) + " " + today.getFullYear();
+
+loadEvents();
+
+let calendarHTML = "";
+
+for(let i=1; i<=31; i++){
+
+calendarHTML += `
+<div style="
+display:inline-block;
+width:60px;
+height:60px;
+margin:5px;
+border:1px solid #ccc;
+border-radius:8px;
+text-align:center;
+line-height:60px;
+background:white;
+">
+${i}
+</div>
+`;
+
+}
+
+document.getElementById("calendarGrid").innerHTML =
+calendarHTML;
+
+}
+
+function addEvent(){
+
+let v =
+document.getElementById("eventInput").value;
+
+if(!v) return;
+
+let events =
+JSON.parse(
+localStorage.getItem("mcalendar_events")
+|| "[]"
+);
+
+events.push(v);
+
+localStorage.setItem(
+"mcalendar_events",
+JSON.stringify(events)
+);
+
+document.getElementById("eventInput").value="";
+
+loadEvents();
+
+document.getElementById("monthYear").innerHTML =
+today.toLocaleString("default", {
+month:"long"
+}) + " " + today.getFullYear();
+
+}
+
+function loadEvents(){
+
+let events =
+JSON.parse(
+localStorage.getItem("mcalendar_events")
+|| "[]"
+);
+
+let html="";
+
+events.forEach(function(e){
+
+html += `
+<div style="
+padding:8px;
+margin:5px;
+background:#f5f5f5;
+border-radius:8px;
+">
+📌 ${e}
+</div>
+`;
+
+});
+
+document.getElementById("eventList").innerHTML =
+html;
+
+}
+
+function addReminder(){
+let v=document.getElementById("reminderInput").value;
+document.getElementById("reminderList").innerHTML += "<div>"+v+"</div>";
+}
+
+function addBirthday(){
+let v=document.getElementById("birthdayInput").value;
+document.getElementById("birthdayList").innerHTML += "<div>"+v+"</div>";
+}
+
+function addMeeting(){
+let v=document.getElementById("meetingInput").value;
+document.getElementById("meetingList").innerHTML += "<div>"+v+"</div>";
+}
+
+function addTodo(){
+let v=document.getElementById("todoInput").value;
+
+document.getElementById("todoList").innerHTML +=
+"<div><input type='checkbox'> "+v+"</div>";
+}
+openMCalendar();
+
+</script>
+
+</body>
+</html>

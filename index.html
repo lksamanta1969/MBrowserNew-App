@@ -10,7 +10,8 @@ body{
 margin:0;
 font-family:Arial;
 background:#f1f1f1;
-overflow:hidden;
+overflow-x:hidden;
+overflow-y:auto;
 }
 
 /* Top Area */
@@ -334,9 +335,10 @@ Close
 🧮 MCalculator
 </div>
 
-<div class="app" onclick="openMCalendar();toggleApps()">
-🗓️ MCalendar
+<div class="app" onclick="openMCalender();toggleApps()">
+ 📅 MCalender
 </div>
+
 
 </div>    
       
@@ -465,6 +467,19 @@ JSON.parse(
 localStorage.getItem("mpayHistory") || "[]"
 );
 
+function openMCalender(){
+
+  document.getElementById("home").style.display="none";
+
+  let browser =
+  document.getElementById("browser");
+
+  browser.style.display="flex";
+
+  browser.src =
+  "file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowserNew/apps/mcalender.html";
+}
+
 function openMPay(){
 
 document.getElementById("browser").style.display="none";
@@ -476,6 +491,7 @@ document.getElementById("home").innerHTML = `
 <div style="padding:40px;max-width:900px;margin:auto;">
 
 <h1 style="color:#b45309;text-align:center;">
+
 💳 MPay
 </h1>
 
@@ -808,332 +824,15 @@ return;
 
 function openMCalculator(){
 
-document.getElementById("browser").style.display="none";
-document.getElementById("home").style.display="block";
-document.getElementById("url").value="";
+  document.getElementById("home").style.display="none";
 
-document.getElementById("home").innerHTML=`
+  let browser =
+  document.getElementById("browser");
 
-<h1 style="color:#b45309;text-align:center;">
-🧮 MCalculator Pro
-</h1>
+  browser.style.display="flex";
 
-<div style="
-max-width:500px;
-margin:auto;
-margin-top:30px;
-background:white;
-padding:20px;
-border-radius:15px;
-box-shadow:0 0 15px rgba(0,0,0,.15);
-">
-
-<input
-id="calcDisplay"
-readonly
-style="
-width:100%;
-padding:15px;
-font-size:28px;
-text-align:right;
-margin-bottom:15px;
-border:1px solid #ddd;
-border-radius:10px;
-">
-
-<div style="
-display:grid;
-grid-template-columns:repeat(5,1fr);
-gap:8px;
-">
-
-<button onclick="calcClear()">C</button>
-<button onclick="calcBack()">⌫</button>
-<button onclick="calcAdd('%')">%</button>
-<button onclick="calcAdd('(')">(</button>
-<button onclick="calcAdd(')')">)</button>
-
-<button onclick="calcFunc('sin')">sin</button>
-<button onclick="calcFunc('cos')">cos</button>
-<button onclick="calcFunc('tan')">tan</button>
-<button onclick="calcFunc('log')">log</button>
-<button onclick="calcFunc('ln')">ln</button>
-
-<button onclick="calcAdd('7')">7</button>
-<button onclick="calcAdd('8')">8</button>
-<button onclick="calcAdd('9')">9</button>
-<button onclick="calcAdd('/')">÷</button>
-<button onclick="calcSqrt()">√</button>
-
-<button onclick="calcAdd('4')">4</button>
-<button onclick="calcAdd('5')">5</button>
-<button onclick="calcAdd('6')">6</button>
-<button onclick="calcAdd('*')">×</button>
-<button onclick="calcSquare()">x²</button>
-
-<button onclick="calcAdd('1')">1</button>
-<button onclick="calcAdd('2')">2</button>
-<button onclick="calcAdd('3')">3</button>
-<button onclick="calcAdd('-')">−</button>
-<button onclick="calcCube()">x³</button>
-
-<button onclick="calcAdd('0')">0</button>
-<button onclick="calcAdd('.')">.</button>
-<button onclick="calcAdd('3.1415926535')">π</button>
-<button onclick="calcAdd('+')">+</button>
-<button
-onclick="calcResult()"
-style="
-background:#16a34a;
-color:white;
-font-weight:bold;
-">
-=
-</button>
-
-<button onclick="calcAdd('2.718281828')">e</button>
-<button onclick="calcPower()">xʸ</button>
-
-</div>
-<div id="calcHistory"
-style="
-margin-top:30px;
-background:#f8fafc;
-padding:15px;
-border-radius:10px;
-font-size:14px;
-max-height:150px;
-overflow-y:auto;
-">
-<b>History</b><br><br>
-
-</div>
-
-</div>
-
-`;
-
-}
-
-function calcAdd(val){
-document.getElementById("calcDisplay").value += val;
-}
-
-function calcClear(){
-document.getElementById("calcDisplay").value="";
-}
-
-function calcBack(){
-let d=document.getElementById("calcDisplay");
-d.value=d.value.slice(0,-1);
-}
-
-function calcSquare(){
-let d=document.getElementById("calcDisplay");
-d.value=Math.pow(Number(d.value),2);
-}
-
-function calcCube(){
-let d=document.getElementById("calcDisplay");
-d.value=Math.pow(Number(d.value),3);
-}
-
-function calcSqrt(){
-let d=document.getElementById("calcDisplay");
-d.value=Math.sqrt(Number(d.value));
-}
-
-function calcPower(){
-calcAdd("**");
-}
-
-function calcFunc(type){
-
-let d=document.getElementById("calcDisplay");
-
-let v=Number(d.value);
-
-if(type==="sin") d.value=Math.sin(v*Math.PI/180);
-if(type==="cos") d.value=Math.cos(v*Math.PI/180);
-if(type==="tan") d.value=Math.tan(v*Math.PI/180);
-if(type==="log") d.value=Math.log10(v);
-if(type==="ln") d.value=Math.log(v);
-
-}
-
-let calcHistory = [];
-
-function calcResult(){
-
-try{
-
-let expr=document
-.getElementById("calcDisplay")
-.value
-.replace(/%/g,"/100");
-
-let result=eval(expr);
-
-calcHistory.push(expr + " = " + result);
-
-document.getElementById("calcHistory").innerHTML =
-"<b>History</b><br><br>" +
-calcHistory.join("<br>");
-
-document.getElementById("calcDisplay").value=result;
-
-}catch{
-
-alert("Invalid Calculation");
-
-}
-
-}
-
-function openMCalendar(){
-
-document.getElementById("browser").style.display="none";
-document.getElementById("home").style.display="block";
-document.getElementById("url").value="";
-
-const today = new Date();
-
-document.getElementById("home").innerHTML=`
-
-<h1 style="
-color:#b45309;
-text-align:center;
-font-size:72px;
-">
-📅 MCalendar
-</h1>
-
-<div style="
-max-width:700px;
-margin:auto;
-background:white;
-padding:25px;
-border-radius:20px;
-box-shadow:0 0 20px rgba(0,0,0,.15);
-text-align:center;
-">
-
-<h2>
-${today.toDateString()}
-</h2>
-
-<p style="
-font-size:22px;
-color:#555;
-">
-Current Time
-</p>
-
-<h1 id="clock">
-00:00:00
-</h1>
-
-</div>
-<hr style="margin:30px 0;">
-
-<h2 style="text-align:center;">
-📅 Monthly Calendar
-</h2>
-
-<div id="calendarGrid"></div>
-
-<hr style="margin:30px 0;">
-
-<h2>📝 Add Event</h2>
-<input id="eventInput" placeholder="Enter Event">
-
-<button onclick="addEvent()">
-Add Event
-</button>
-
-<div id="eventList"></div>
-
-<hr>
-
-<h2>⏰ Reminder</h2>
-<input id="reminderInput" placeholder="Reminder">
-
-<button onclick="addReminder()">
-Add Reminder
-</button>
-
-<div id="reminderList"></div>
-
-<hr>
-
-<h2>🎂 Birthday Reminder</h2>
-<input id="birthdayInput" placeholder="Birthday">
-
-<button onclick="addBirthday()">
-Add Birthday
-</button>
-
-<div id="birthdayList"></div>
-
-<hr>
-
-<h2>📅 Meeting Schedule</h2>
-<input id="meetingInput" placeholder="Meeting">
-
-<button onclick="addMeeting()">
-Add Meeting
-</button>
-
-<div id="meetingList"></div>
-
-<hr>
-
-<h2>✅ To-Do List</h2>
-<input id="todoInput" placeholder="New Task">
-
-<button onclick="addTodo()">
-Add Task
-</button>
-
-<div id="todoList"></div>
-
-`;
-
-setInterval(()=>{
-
-const now = new Date();
-
-document.getElementById("clock").innerHTML =
-now.toLocaleTimeString();
-
-},1000);
-
-}
-function addEvent(){
-let v=document.getElementById("eventInput").value;
-document.getElementById("eventList").innerHTML += "<div>"+v+"</div>";
-}
-
-function addReminder(){
-let v=document.getElementById("reminderInput").value;
-document.getElementById("reminderList").innerHTML += "<div>"+v+"</div>";
-}
-
-function addBirthday(){
-let v=document.getElementById("birthdayInput").value;
-document.getElementById("birthdayList").innerHTML += "<div>"+v+"</div>";
-}
-
-function addMeeting(){
-let v=document.getElementById("meetingInput").value;
-document.getElementById("meetingList").innerHTML += "<div>"+v+"</div>";
-}
-
-function addTodo(){
-let v=document.getElementById("todoInput").value;
-
-document.getElementById("todoList").innerHTML +=
-"<div><input type='checkbox'> "+v+"</div>";
+  browser.src =
+  "file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowserNew/apps/mcalculator.html";
 }
 
 function openMMail(){
