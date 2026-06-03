@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 
 const nodemailer = require("nodemailer");
@@ -48,9 +50,9 @@ service:"gmail",
 
 auth:{
 
-user:"lk.samanta1969@gmail.com",
+user:process.env.EMAIL_USER,
 
-pass:"vdfinekzztmltwug"
+pass:process.env.EMAIL_PASS
 
 }
 
@@ -73,7 +75,7 @@ try{
 
 await transporter.sendMail({
 
-from:"lk.samanta1969@gmail.com",
+from:process.env.EMAIL_USER,
 
 to:mail.to,
 
@@ -88,7 +90,7 @@ text:mail.msg
 console.log("MAIL SENT SUCCESS");
 
 db.sent.unshift(mail);
-
+  
 saveDB(db);
 
 res.send("Mail sent");
@@ -165,9 +167,9 @@ app.get("/syncInbox",(req,res)=>{
 
 const imap = new Imap({
 
-user:"lk.samanta1969@gmail.com",
+user:process.env.EMAIL_USER,
 
-password:"vdfinekzztmltwug",
+password:process.env.EMAIL_PASS,
 
 host:"imap.gmail.com",
 
