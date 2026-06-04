@@ -76,21 +76,37 @@ button{
 
         <br><br>
 
-        <button class="compose">
-            ✉ Compose
-        </button>
+        <button class="compose" onclick="openCompose()">
+    ✉ Compose
+</button>
 
-        <div class="menu">
-            <p>📥 Inbox</p>
-            <p>⭐ Starred</p>
-            <p>📤 Sent</p>
-            <p>📝 Drafts</p>
-            <p>🗑 Trash</p>
-        </div>
+       <div class="menu">
+
+    <p onclick="loadInbox()">📥 Inbox</p>
+
+    <p onclick="loadPrimary()">📂 Primary</p>
+
+    <p onclick="loadSocial()">👥 Social</p>
+
+    <p onclick="loadPromotions()">🏷 Promotions</p>
+
+    <p onclick="loadSent()">📤 Sent</p>
+
+    <p onclick="loadDrafts()">📝 Drafts</p>
+
+    <p onclick="loadTrash()">🗑 Trash</p>
+
+    <p onclick="openSearch()">🔍 Search</p>
+
+    <p onclick="openProfile()">👤 Profile</p>
+
+    <p onclick="toggleDarkMode()">🌙 Dark Mode</p>
+
+</div> 
 
     </div>
 
-    <div class="main">
+    <div class="main" id="content">
 
         <h1>Inbox</h1>
 
@@ -105,6 +121,160 @@ button{
     </div>
 
 </div>
+<script>
+
+async function loadInbox(){
+
+alert("Inbox Clicked");
+
+try{
+
+const res = await fetch("http://localhost:3000/syncInbox");
+const mails = await res.json();
+
+let html="<h1>Inbox</h1><hr>";
+
+if(mails.length===0){
+html+="<p>No messages found.</p>";
+}
+
+mails.forEach(m=>{
+
+html+=`
+<div>
+<b>${m.from || "Unknown"}</b><br>
+${m.subject || ""}
+<hr>
+</div>
+`;
+
+});
+
+document.getElementById("content").innerHTML=html;
+
+}catch(e){
+console.log(e);
+}
+
+}
+
+function openCompose(){
+
+alert("Compose Clicked");
+
+document.getElementById("content").innerHTML =
+'<h1>Compose Mail</h1>' +
+'<input id="to" placeholder="To" style="width:100%;padding:10px;"><br><br>' +
+'<input id="cc" placeholder="CC" style="width:100%;padding:10px;"><br><br>' +
+'<input id="subject" placeholder="Subject" style="width:100%;padding:10px;"><br><br>' +
+'<textarea id="msg" style="width:100%;height:250px;"></textarea><br><br>' +
+'<button onclick="sendMail()">Send Mail</button> ' +
+'<button onclick="saveDraft()">Save Draft</button>';
+
+}
+async function sendMail(){
+
+await fetch("http://localhost:3000/send",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+to:document.getElementById("to").value,
+cc:document.getElementById("cc").value,
+subject:document.getElementById("subject").value,
+msg:document.getElementById("msg").value
+
+})
+
+});
+
+alert("Mail Sent");
+
+}
+
+async function saveDraft(){
+
+await fetch("http://localhost:3000/draft",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+to:document.getElementById("to").value,
+cc:document.getElementById("cc").value,
+subject:document.getElementById("subject").value,
+msg:document.getElementById("msg").value
+
+})
+
+});
+
+alert("Draft Saved");
+
+}
+
+function loadPrimary(){
+    document.getElementById("content").innerHTML =
+    "<h1>📂 Primary</h1><p>No mails available.</p>";
+}
+
+function loadSocial(){
+    document.getElementById("content").innerHTML =
+    "<h1>👥 Social</h1><p>No social mails available.</p>";
+}
+
+function loadPromotions(){
+    document.getElementById("content").innerHTML =
+    "<h1>🏷 Promotions</h1><p>No promotions available.</p>";
+}
+
+async function loadDrafts(){
+
+const res = await fetch("http://localhost:3000/draft");
+const drafts = await res.json();
+
+let html="<h1>📝 Drafts</h1><hr>";
+
+if(drafts.length===0){
+html+="<p>No drafts available.</p>";
+}
+
+drafts.forEach(d=>{
+html+=`
+<div style="padding:10px;border-bottom:1px solid #ddd;">
+<b>${d.subject || "(No Subject)"}</b><br>
+To: ${d.to || ""}
+</div>
+`;
+});
+
+document.getElementById("content").innerHTML=html;
+
+}
+
+function openSearch(){
+    alert("Mail Search Coming Soon");
+}
+
+function openProfile(){
+    alert("User Profile Coming Soon");
+}
+
+function toggleDarkMode(){
+    document.body.classList.toggle("dark");
+}
+
+</script>
 
 </body>
+
 </html>

@@ -57,7 +57,15 @@ pass:process.env.EMAIL_PASS
 }
 
 });
+transporter.verify(function(error, success){
 
+  if(error){
+    console.log("SMTP ERROR:", error);
+  }else{
+    console.log("SMTP READY");
+  }
+
+});
 
 /* SEND */
 
@@ -167,15 +175,19 @@ app.get("/syncInbox",(req,res)=>{
 
 const imap = new Imap({
 
-user:process.env.EMAIL_USER,
+user: process.env.EMAIL_USER,
 
-password:process.env.EMAIL_PASS,
+password: process.env.EMAIL_PASS,
 
-host:"imap.gmail.com",
+host: "imap.gmail.com",
 
-port:993,
+port: 993,
 
-tls:true
+tls: true,
+
+tlsOptions: {
+    rejectUnauthorized: false
+}
 
 });
 
@@ -262,6 +274,16 @@ imap.end();
 });
 
 });
+
+});
+
+imap.once("error",(err)=>{
+
+console.error("IMAP ERROR:", err);
+
+if(!res.headersSent){
+    res.status(500).send(err.toString());
+}
 
 });
 

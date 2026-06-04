@@ -899,7 +899,7 @@ border:none;
 border-radius:12px;
 background:#b45309;
 color:white;
-font-size:16px;
+font-size:16px;   
 margin-top:20px;
 cursor:pointer;
 ">
@@ -908,7 +908,7 @@ cursor:pointer;
 
 <div style="margin-top:30px;line-height:40px;">
 
-<div onclick="showInbox()">📥 Inbox</div>
+<div onclick="alert('Inbox Clicked');showInbox()">📥 Inbox</div>
 <div onclick="showDrafts()">⭐ Starred</div>
 <div onclick="showSent()">📤 Sent</div>
 <div onclick="showTrash()">🗑 Trash</div>
@@ -1063,7 +1063,9 @@ showInbox();
 
 async function showInbox(){
 
-const response = await fetch("http://localhost:3000/syncInbox");
+alert("showInbox running");
+
+const response = await fetch("http://localhost:3000/inbox");
 
 const inboxMails = await response.json();
 
@@ -1262,6 +1264,10 @@ cursor:pointer;
 </button>
 
 `;
+
+setTimeout(() => {
+    document.getElementById("toMail").focus();
+}, 100);
 
 }
 
