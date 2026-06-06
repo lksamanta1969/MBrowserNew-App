@@ -2,7 +2,7 @@
 <html>
 
 <head>
-<title>M Browser</title>
+<title>MBrowser</title>
 
 <style>
 
@@ -256,6 +256,7 @@ color:white;
 
 
   <body>
+
     <!-- SIGN UP POPUP -->
 <div id="signupPopup" class="popup">
 
@@ -265,10 +266,13 @@ color:white;
 
 <input type="text" id="signupName" placeholder="Name">
 
-<input type="email" id="signupEmail" placeholder="Email">
+<div style="display:flex;align-items:center;background:#f5f5f5;border-radius:8px;padding:0 10px;margin-bottom:10px;">
+    <input type="text" id="signupEmail" placeholder="Username"
+           style="flex:1;border:none;background:none;outline:none;padding:12px;">
+    <span>@mmail.in</span>
+</div>
 
 <input type="password" id="signupPassword" placeholder="Password">
-
 <button onclick="createAccount(); closePopup()">Create Account</button>
 
 <button onclick="closePopup()" style="
@@ -366,8 +370,10 @@ Close
 <button onclick="refreshPage()">⟳</button>
 
 <input id="url"
+autofocus
 placeholder="Search or Enter URL"
 onkeypress="if(event.key==='Enter'){loadSite()}">
+
 <button onclick="toggleApps()">⣿</button>
 <button onclick="loadSite()">Go</button>
 
@@ -391,8 +397,8 @@ id="homesearch"
 placeholder="Search Google or type a URL"
 onkeydown="homeSearch(event)">
 
-<button id="googleBtn">
-  Sign in with Google
+<button id="googleBtn" onclick="googleLogin()">
+    Sign in with Google
 </button>
 
 </div>
@@ -402,7 +408,7 @@ onkeydown="homeSearch(event)">
 <webview
 id="browser"
 src=""
-preload="file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowserNew/preload.js"
+preload="file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowser/preload.js"
 style="
 width:100%;
 height:100vh;
@@ -411,6 +417,30 @@ display:none;
 </webview>
 
 <script>
+
+function goBack() {
+    const browser = document.getElementById("browser");
+
+    if (browser && browser.canGoBack()) {
+        browser.goBack();
+    }
+}
+
+function goForward() {
+    const browser = document.getElementById("browser");
+
+    if (browser && browser.canGoForward()) {
+        browser.goForward();
+    }
+}
+
+function refreshPage() {
+    const browser = document.getElementById("browser");
+
+    if (browser) {
+        browser.reload();
+    }
+}
 
  let sentMails = [];
 let draftMails = [];
@@ -424,7 +454,9 @@ document.getElementById("browser");
 
 browser.style.display="flex";
 
-browser.src = "file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowserNew/apps/mnotes.html";
+document.getElementById("url").blur();
+
+browser.src = "file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowser/apps/mnotes.html";
 
 }
 
@@ -438,7 +470,7 @@ document.getElementById("browser");
 browser.style.display="flex";
 
 browser.src =
-"file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowserNew/apps/mtube.html";
+"file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowser/apps/mtube.html";
 
 }
 
@@ -454,7 +486,7 @@ function openMDrive(){
   browser.style.display="flex";
 
   browser.src =
-  "file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowserNew/apps/mdrive.html";
+  "file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowser/apps/mdrive.html";
 }
 
 let walletBalance =
@@ -477,348 +509,20 @@ function openMCalender(){
   browser.style.display="flex";
 
   browser.src =
-  "file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowserNew/apps/mcalender.html";
+  "file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowser/apps/mcalender.html";
 }
 
 function openMPay(){
 
-document.getElementById("browser").style.display="none";
-document.getElementById("home").style.display="block";
-document.getElementById("url").value="";
+document.getElementById("home").style.display = "none";
 
-document.getElementById("home").innerHTML = `
+let browser =
+document.getElementById("browser");
 
-<div style="padding:40px;max-width:900px;margin:auto;">
+browser.style.display = "flex";
 
-<h1 style="color:#b45309;text-align:center;">
-
-💳 MPay
-</h1>
-
-<div style="
-background:white;
-padding:20px;
-border-radius:15px;
-box-shadow:0 0 10px rgba(0,0,0,0.1);
-margin-bottom:20px;
-text-align:center;
-">
-<h2>Wallet Balance</h2>
-
-<input
-id="walletBalanceText"
-type="number"
-value="${walletBalance}"
-style="
-font-size:60px;
-font-weight:bold;
-color:#16a34a;
-text-align:center;
-border:none;
-background:transparent;
-width:300px;
-outline:none;
-">
-
-</div>
-
-<div style="text-align:center;margin-bottom:20px;">
-
-<button onclick="addMoney()">
-
-Add ₹1000
-
-</button>
-<button onclick="saveBalance()">
-Save Balance
-</button>
-</div>
-
-<div style="
-display:flex;
-gap:15px;
-justify-content:center;
-margin-bottom:25px;
-">
-
-<button onclick="showSendMoney()">
-Send Money
-</button>
-
-<button onclick="showRequestMoney()">
-Request Money
-</button>
-
-<button onclick="showHistory()">
-History
-</button>
-
-</div>
-
-<div id="mpayContent"></div>
-
-</div>
-
-`;
-
-
-}
-
-async function saveBalance(){
-
-walletBalance =
-parseFloat(
-document.getElementById(
-"walletBalanceText"
-).value || 0
-);
-
-try{
-
-await fetch(
-"http://localhost:3000/mpayBalance",
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-balance: walletBalance
-})
-}
-);
-
-alert("Balance Saved To Database");
-
-}catch(err){
-
-alert("Server Error");
-
-console.log(err);
-
-return;
-
-}
-
-openMPay();
-
-}
-
-async function addMoney(){
-
-try{
-
-let response = await fetch(
-"http://localhost:3000/mpayAddMoney",
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-amount:1000
-})
-}
-);
-
-let data = await response.json();
-
-walletBalance = data.balance;
-
-document.getElementById(
-"walletBalanceText"
-).value = walletBalance;
-
-alert("₹1000 Added");
-
-openMPay();
-
-}
-catch(err){
-
-alert("Server Error");
-
-console.log(err);
-
-}
-
-}
-
-
-function showSendMoney(){
-
-document.getElementById("mpayContent").innerHTML = `
-
-<h2>Send Money</h2>
-
-<input id="receiver"
-placeholder="Receiver Name"
-style="padding:10px;width:250px;"><br><br>
-
-<input id="amount"
-placeholder="Amount"
-type="number"
-style="padding:10px;width:250px;"><br><br>
-
-<button onclick="sendMoney()">
-Transfer
-</button>
-
-`;
-
-}
-
-function sendMoney(){
-
-let receiver =
-document.getElementById("receiver").value;
-
-let amount =
-parseFloat(
-document.getElementById("amount").value
-);
-
-if(!receiver || !amount){
-if(amount <= 0){
-alert("Invalid Amount");
-return;
-}
-alert("Enter Details");
-return;
-}
-
-if(amount > walletBalance){
-alert("Insufficient Balance");
-return;
-}
-
-walletBalance -= amount;
-
-localStorage.setItem(
-"mpayBalance",
-walletBalance
-);
-
-transactions.push(
-"Sent ₹" + amount + " to " + receiver
-);
-
-localStorage.setItem(
-"mpayHistory",
-JSON.stringify(transactions)
-);
-
-alert("Money Sent");
-
-openMPay();
-
-}
-
-function showRequestMoney(){
-
-document.getElementById("mpayContent").innerHTML = `
-
-<h2>Request Money</h2>
-
-<input id="requestFrom"
-placeholder="Request From"
-style="padding:10px;width:250px;"><br><br>
-
-<input id="requestAmount"
-placeholder="Amount"
-type="number"
-style="padding:10px;width:250px;"><br><br>
-
-<button onclick="requestMoney()">
-Request
-</button>
-
-`;
-
-}
-
-function requestMoney(){
-
-let person =
-document.getElementById("requestFrom").value;
-
-let amount =
-document.getElementById("requestAmount").value;
-
-if(!person || !amount){
-alert("Enter Details");
-return;
-}
-
-transactions.push(
-"Requested ₹" + amount + " from " + person
-);
-
-localStorage.setItem(
-"mpayHistory",
-JSON.stringify(transactions)
-);
-
-alert("Request Sent");
-
-openMPay();
-
-}
-
-async function showHistory(){
-
-try{
-
-const res = await fetch("http://localhost:3000/mpayHistory");
-
-const transactions = await res.json();
-
-let html = "";
-
-if(transactions.length===0){
-
-html = "No Transactions Found";
-
-}else{
-
-transactions.forEach(item=>{
-
-html += `
-<div style="
-padding:10px;
-border-bottom:1px solid #ddd;
-">
-${item}
-</div>
-`;
-
-});
-
-}
-
-document.getElementById("mpayContent").innerHTML = `
-
-<h2>Transaction History</h2>
-
-<div style="
-background:white;
-padding:15px;
-border-radius:10px;
-">
-${html}
-</div>
-
-`;
-
-}catch(err){
-
-alert("History Load Error");
-
-console.log(err);
-
-return;
-
-}
+browser.src =
+"file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowser/apps/mpay.html";
 
 }
 
@@ -832,7 +536,7 @@ function openMCalculator(){
   browser.style.display="flex";
 
   browser.src =
-  "file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowserNew/apps/mcalculator.html";
+  "file:///C:/Users/L.K.%20SAMANTA/Desktop/MBrowser/apps/mcalculator.html";
 }
 
 function openMMail(){
@@ -1087,7 +791,14 @@ border-bottom:1px solid #ddd;
 ">
 <b>From:</b> ${mail.from}<br><br>
 <b>Subject:</b> ${mail.subject}<br><br>
-${mail.msg}
+<div style="
+max-height:80px;
+overflow:hidden;
+white-space:pre-wrap;
+">
+${(mail.msg || "").substring(0,150)}
+</div>
+
 </div>
 `;
 
@@ -1284,8 +995,12 @@ let body=document.getElementById("bodyMail").value;
 
 try{
 
-
-const response = await fetch("http://localhost:3000/send",{
+alert("SEND STARTED");
+alert("TO = " + to);
+alert("CC = " + cc);
+alert("SUBJECT = " + subject);
+const response = await fetch("http://127.0.0.1:3000/send",{
+  
   method:"POST",
   headers:{
     "Content-Type":"application/json"
@@ -1309,9 +1024,9 @@ if(!response.ok){
 
 }catch(err){
 
-alert("Mail sending failed");
+console.log("FULL ERROR =", err);
 
-console.log(err);
+alert("ERROR: " + err);
 
 return;
 
@@ -1356,47 +1071,44 @@ font-size:22px;
 const browser=document.getElementById("browser");
 
 /* Load Website */
-function goBack(){
+
+function goBack() {
 
 const browser = document.getElementById("browser");
 
-if(!browser || browser.style.display==="none"){
-    console.log("No browser active");
-    return;
-}
+if(browser.canGoBack()){
 
-try{
-    if(browser.canGoBack()){
-        browser.goBack();
-    }else{
-        console.log("No back history");
-    }
-}catch(err){
-    console.log(err);
+    browser.goBack();
+
+}else{
+
+    onHomePage = true;
+
+    browser.style.display = "none";
+    document.getElementById("home").style.display = "block";
 }
 
 }
 
-function goForward(){
+function goForward() {
 
 const browser = document.getElementById("browser");
 
-if(!browser || browser.style.display==="none"){
-    console.log("No browser active");
+if(onHomePage){
+
+    document.getElementById("home").style.display = "none";
+    browser.style.display = "flex";
+
+    onHomePage = false;
     return;
 }
 
-try{
-    if(browser.canGoForward()){
-        browser.goForward();
-    }else{
-        console.log("No forward history");
-    }
-}catch(err){
-    console.log(err);
+if(browser.canGoForward()){
+    browser.goForward();
 }
 
 }
+
 function loadSite(){
 
 let url=document.getElementById("url").value.trim();
@@ -1495,9 +1207,15 @@ menu.style.display="flex";
 
 window.onload=function(){
 
-document.getElementById("appsMenu").style.display="none";
+    document.getElementById("appsMenu").style.display="none";
+
+    setTimeout(() => {
+        document.getElementById("url").focus();
+    }, 300);
 
 }
+
+
 
 function openApp(url){
 

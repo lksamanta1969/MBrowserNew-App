@@ -261,6 +261,33 @@ document.getElementById("content").innerHTML=html;
 
 }
 
+async function loadSent(){
+
+    const res = await fetch("http://localhost:3000/sent");
+    const mails = await res.json();
+
+    let html = "<h1>📤 Sent Mail</h1><hr>";
+
+    if(mails.length===0){
+        html += "<p>No sent mails yet.</p>";
+    }
+
+    mails.forEach(m=>{
+
+        html += `
+        <div style="padding:10px;border-bottom:1px solid #ddd;">
+            <b>${m.subject || "(No Subject)"}</b><br>
+            To: ${m.to || ""}<br>
+            CC: ${m.cc || ""}<br>
+            ${m.msg || ""}
+        </div>
+        `;
+
+    });
+
+    document.getElementById("content").innerHTML = html;
+}
+
 function openSearch(){
     alert("Mail Search Coming Soon");
 }

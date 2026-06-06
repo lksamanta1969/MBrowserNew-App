@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MPay</title>
+</head>
+<body>
+
+<div style="padding:40px;max-width:900px;margin:auto;">
+
+<h1 style="color:#b45309;text-align:center;">
+
+💳 MPay
+</h1>
+
+<div style="
+background:white;
+padding:20px;
+border-radius:15px;
+box-shadow:0 0 10px rgba(0,0,0,0.1);
+margin-bottom:20px;
+text-align:center;
+">
+<h2>Wallet Balance</h2>
+
+<input
+id="walletBalanceText"
+type="number"
+value="0"
+style="
+font-size:60px;
+font-weight:bold;
+color:#16a34a;
+text-align:center;
+border:none;
+background:transparent;
+width:300px;
+outline:none;
+">
+
+</div>
+
+<div style="text-align:center;margin-bottom:20px;">
+
+<button onclick="addMoney()">
+
+Add ₹1000
+
+</button>
+<button onclick="saveBalance()">
+Save Balance
+</button>
+</div>
+
+<div style="
+display:flex;
+gap:15px;
+justify-content:center;
+margin-bottom:25px;
+">
+
+<button onclick="showSendMoney()">
+Send Money
+</button>
+
+<button onclick="showRequestMoney()">
+Request Money
+</button>
+
+<button onclick="showHistory()">
+History
+</button>
+
+</div>
+
+<div id="mpayContent"></div>
+
+</div>
+
+<script>
+
+let walletBalance = 0;
+let transactions = [];
+
+async function saveBalance(){
+
+walletBalance =
+parseFloat(
+document.getElementById(
+"walletBalanceText"
+).value || 0
+);
+
+try{
+
+await fetch(
+"http://localhost:3000/mpayBalance",
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+balance: walletBalance
+})
+}
+);
+
+alert("Balance Saved To Database");
+
+}catch(err){
+
+alert("Server Error");
+
+console.log(err);
+
+return;
+
+}
+
+location.reload();
+
+}
+
+async function addMoney(){
+
+try{
+
+let response = await fetch(
+"http://localhost:3000/mpayAddMoney",
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+amount:1000
+})
+}
+);
+
+let data = await response.json();
+
+walletBalance = data.balance;
+
+document.getElementById(
+"walletBalanceText"
+).value = walletBalance;
+
+alert("₹1000 Added");
+
+location.reload();
+
+}
+catch(err){
+
+alert("Server Error");
+
+console.log(err);
+
+}
+
+}
+
+
+function showSendMoney(){
+
+document.getElementById("mpayContent").innerHTML = `
+
+<h2>Send Money</h2>
+
+<input id="receiver"
+placeholder="Receiver Name"
+style="padding:10px;width:250px;"><br><br>
+
+<input id="amount"
+placeholder="Amount"
+type="number"
+style="padding:10px;width:250px;"><br><br>
+
+<button onclick="sendMoney()">
+Transfer
+</button>
+
+`;
+
+}
+
+function sendMoney(){
+
+let receiver =
+document.getElementById("receiver").value;
+
+let amount =
+parseFloat(
+document.getElementById("amount").value
+);
+
+if(!receiver || !amount){
+if(amount <= 0){
+alert("Invalid Amount");
+return;
+}
+alert("Enter Details");
+return;
+}
+
+if(amount > walletBalance){
+alert("Insufficient Balance");
+return;
+}
+
+walletBalance -= amount;
+
+localStorage.setItem(
+"mpayBalance",
+walletBalance
+);
+
+transactions.push(
+"Sent ₹" + amount + " to " + receiver
+);
+
+localStorage.setItem(
+"mpayHistory",
+JSON.stringify(transactions)
+);
+
+alert("Money Sent");
+
+location.reload();
+
+}
+
+function showRequestMoney(){
+
+document.getElementById("mpayContent").innerHTML = `
+
+<h2>Request Money</h2>
+
+<input id="requestFrom"
+placeholder="Request From"
+style="padding:10px;width:250px;"><br><br>
+
+<input id="requestAmount"
+placeholder="Amount"
+type="number"
+style="padding:10px;width:250px;"><br><br>
+
+<button onclick="requestMoney()">
+Request
+</button>
+
+`;
+
+}
+
+function requestMoney(){
+
+let person =
+document.getElementById("requestFrom").value;
+
+let amount =
+document.getElementById("requestAmount").value;
+
+if(!person || !amount){
+alert("Enter Details");
+return;
+}
+
+transactions.push(
+"Requested ₹" + amount + " from " + person
+);
+
+localStorage.setItem(
+"mpayHistory",
+JSON.stringify(transactions)
+);
+
+alert("Request Sent");
+
+location.reload();
+
+}
+
+async function showHistory(){
+
+try{
+
+const res = await fetch("http://localhost:3000/mpayHistory");
+
+const transactions = await res.json();
+
+let html = "";
+
+if(transactions.length===0){
+
+html = "No Transactions Found";
+
+}else{
+
+transactions.forEach(item=>{
+
+html += `
+<div style="
+padding:10px;
+border-bottom:1px solid #ddd;
+">
+${item}
+</div>
+`;
+
+});
+
+}
+
+document.getElementById("mpayContent").innerHTML = `
+
+<h2>Transaction History</h2>
+
+<div style="
+background:white;
+padding:15px;
+border-radius:10px;
+">
+${html}
+</div>
+
+`;
+
+}catch(err){
+
+alert("History Load Error");
+
+console.log(err);
+
+return;
+
+}
+
+}
+
+ 
+</script>
+
+</body>
+</html>

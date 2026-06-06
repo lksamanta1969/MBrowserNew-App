@@ -15,15 +15,22 @@ const win = new BrowserWindow({
     title: "MBrowser",
     icon: __dirname + "/mbrowser-logo.ico",
 
-   webPreferences: {
+ webPreferences: {
   preload: path.join(__dirname, "preload.js"),
   contextIsolation: true,
   nodeIntegration: false,
-  webviewTag: true
+  webviewTag: true,
+  webSecurity: false,
+  allowRunningInsecureContent: true
 } 
+ 
 });
 
 win.loadFile("index.html");
+
+win.webContents.on("did-finish-load", () => {
+    win.webContents.focus();
+});
 
 win.setMenuBarVisibility(false)
 }

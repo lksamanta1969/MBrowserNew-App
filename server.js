@@ -1,3 +1,13 @@
+process.on("uncaughtException", err => {
+    console.error("UNCAUGHT ERROR:", err);
+});
+
+process.on("exit", code => {
+    console.log("PROCESS EXITED:", code);
+});
+
+console.log("SERVER FILE STARTED");
+
 require("dotenv").config();
 
 const express = require("express");
@@ -23,6 +33,8 @@ app.use(express.static(__dirname));
 
 const dbPath = path.join(__dirname,"maildb.json");
 
+console.log("DB PATH =", dbPath);
+console.log("MAILDB EXISTS =", fs.existsSync(dbPath));
 function readDB(){
 
   if(!fs.existsSync(dbPath)){
@@ -135,7 +147,11 @@ res.send("Draft saved");
 
 app.get("/sent",(req,res)=>{
 
-res.json(readDB().sent);
+    let db = readDB();
+
+    console.log("SENT COUNT =", db.sent.length);
+
+    res.json(db.sent);
 
 });
 
@@ -239,7 +255,16 @@ from: parsed.from?.text || "",
 
 subject: parsed.subject || "",
 
-msg: parsed.text || "",
+msg:
+(
+  parsed.text ||
+  parsed.html ||
+  ""
+)
+.replace(/https?:\/\/\S+/g,"")
+.replace(/\s+/g," ")
+.trim()
+.substring(0,150),
 
 date: parsed.date || ""
 
@@ -368,8 +393,13 @@ res.json(data.transactions);
 
 });
 
-app.listen(3000,()=>{
-
-console.log("SERVER RUNNING");
-
+const server = app.listen(3000, "127.0.0.1", () => {
+  console.log("SERVER RUNNING ON 127.0.0.1:3000");
 });
+
+server.on("error", (err) => {
+  console.error("LISTEN ERROR:", err);
+});
+setInterval(() => {
+    console.log("SERVER ALIVE");
+}, 5000);
