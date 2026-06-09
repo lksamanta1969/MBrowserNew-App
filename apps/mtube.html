@@ -3,74 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <title>MTube</title>
-
 <style>
-body{
-    margin:0;
-    padding:40px;
-    font-family:Arial;
-    background:#f3f4f6;
-}
-
-h1{
-    color:#b45309;
-}
-
-input{
-    width:80%;
-    padding:12px;
-    border-radius:10px;
-    border:1px solid #ccc;
-    font-size:16px;
-}
-
-button{
-    padding:12px 20px;
-    border:none;
-    border-radius:10px;
-    background:#b45309;
-    color:white;
-    cursor:pointer;
-}
-
-iframe{
-    width:100%;
-    height:600px;
-    border:none;
-    margin-top:20px;
-    border-radius:10px;
-}
+*{ box-sizing: border-box; transition: 0.2s; }
+body{ margin:0; padding:40px; font-family:Arial, sans-serif; background:#f3f4f6; }
+h1{ color:#b45309; margin-top: 0; }
+.search-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; gap: 10px; margin-bottom: 20px; }
+input{ flex: 1; padding:12px; border-radius:10px; border:1px solid #ccc; font-size:16px; outline: none; }
+button{ padding:12px 25px; border:none; border-radius:10px; background:#b45309; color:white; cursor:pointer; font-weight: bold; }
+button:hover{ background:#92400e; }
+iframe{ width:100%; height: calc(100vh - 200px); min-height: 550px; border:none; border-radius:12px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
 </style>
-
 </head>
-
 <body>
-
 <h1>📺 MTube</h1>
-
-
-<input id="searchBox" placeholder="Search YouTube">
-
-<button onclick="openYoutube()">
-Search
-</button>
-
-
+<div class="search-container">
+    <input id="searchBox" placeholder="Search YouTube Videos..." onkeypress="if(event.key==='Enter'){openYoutube()}">
+    <button onclick="openYoutube()">Search</button>
+</div>
+<div id="videoContainer"></div>
 
 <script>
-
 function openYoutube(){
-
-let q =
-document.getElementById("searchBox").value;
-
-window.location.href =
-"https://www.youtube.com/results?search_query="
-+ encodeURIComponent(q);
-
+    let q = document.getElementById("searchBox").value.trim();
+    if(!q) return;
+    // ইন-অ্যাপ ফ্রেম লোড প্রোটেকশন
+    document.getElementById("videoContainer").innerHTML = `
+        <iframe src="https://www.youtube.com/results?search_query=${encodeURIComponent(q)}" allowfullscreen></iframe>
+    `;
 }
-
 </script>
-
 </body>
 </html>

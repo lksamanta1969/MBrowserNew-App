@@ -2,306 +2,225 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>MMail</title>
-
+<title>MMail Pro</title>
 <style>
-body{
-    font-family: Arial, sans-serif;
-    background:#f5f5f5;
-    margin:0;
-    padding:20px;
-}
+*{ box-sizing: border-box; transition: background-color 0.3s, color 0.3s; }
+body{ font-family: Arial, sans-serif; background:#f5f5f5; color: #333; margin:0; padding:20px; }
+body.dark { background: #1e1e2d; color: #f5f5f5; }
+body.dark .sidebar, body.dark .main, body.dark .mail-card, body.dark .popup-box { background: #2b2b3d; color: #ffffff; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
+body.dark .menu p:hover { background: #3d3d5c; }
+body.dark hr { border-color: #444; }
+body.dark input, body.dark textarea { background: #1e1e2d; color: white; border-color: #555; }
 
-.container{
-    display:flex;
-    gap:20px;
-}
+.container{ display:flex; gap:20px; align-items: flex-start; }
+.sidebar{ width:240px; background:white; padding:20px; border-radius:15px; box-shadow:0 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+.main{ flex:1; background:white; padding:20px; border-radius:15px; box-shadow:0 0 10px rgba(0,0,0,0.1); min-height: 550px; }
 
-.sidebar{
-    width:220px;
-    background:white;
-    padding:20px;
-    border-radius:15px;
-    box-shadow:0 0 10px rgba(0,0,0,0.1);
-}
+/* Auth Buttons */
+.auth-btn-group { display: flex; gap: 8px; margin: 10px 0; width: 100%; }
+.auth-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; text-align: center; }
+.btn-login { background: #2563eb; color: white; }
+.btn-register { background: #16a34a; color: white; }
 
-.main{
-    flex:1;
-    background:white;
-    padding:20px;
-    border-radius:15px;
-    box-shadow:0 0 10px rgba(0,0,0,0.1);
-}
+button{ padding:10px 15px; border:none; border-radius:8px; cursor:pointer; margin:5px 0; background:#e3e3e3; font-weight:bold; }
+.compose{ background:#b45309; color:white; width:100%; text-align:center; font-size:16px; margin: 10px 0; padding: 12px; }
+.compose:hover { background: #92400e; }
 
-button{
-    padding:10px;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
-    margin:5px;
-}
+.menu{ margin-top:10px; }
+.menu p{ padding:10px; cursor:pointer; margin:4px 0; border-radius:8px; }
+.menu p:hover{ background:#f2f2f2; font-weight: bold; }
+.mail-card { background: #fafafa; padding:15px; margin-bottom:12px; border-radius:8px; border-left:4px solid #b45309; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 
-.compose{
-    background:#b45309;
-    color:white;
-    width:100%;
-}
-
-.menu{
-    margin-top:15px;
-}
-
-.menu p{
-    padding:8px;
-    cursor:pointer;
-}
-
-.menu p:hover{
-    background:#f2f2f2;
-    border-radius:8px;
-}
+/* Popup Module */
+.popup{ display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999; }
+.popup-box{ background:white; padding:25px; border-radius:15px; display:flex; flex-direction:column; gap:12px; width:340px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+.popup-box input{ padding:12px; border-radius:8px; border:1px solid #ddd; font-size:15px; outline:none; width: 100%; }
+.popup-box button{ padding:12px; border:none; border-radius:8px; cursor:pointer; font-size:16px; background:#b85a17; color:white; font-weight:bold; width: 100%; }
 </style>
-
 </head>
 <body>
 
-<div class="container">
-
-    <div class="sidebar">
-
-        <h2>📧 MMail</h2>
-
-        <button>Sign In</button>
-        <button>Sign Up</button>
-
-        <br><br>
-
-        <button class="compose" onclick="openCompose()">
-    ✉ Compose
-</button>
-
-       <div class="menu">
-
-    <p onclick="loadInbox()">📥 Inbox</p>
-
-    <p onclick="loadPrimary()">📂 Primary</p>
-
-    <p onclick="loadSocial()">👥 Social</p>
-
-    <p onclick="loadPromotions()">🏷 Promotions</p>
-
-    <p onclick="loadSent()">📤 Sent</p>
-
-    <p onclick="loadDrafts()">📝 Drafts</p>
-
-    <p onclick="loadTrash()">🗑 Trash</p>
-
-    <p onclick="openSearch()">🔍 Search</p>
-
-    <p onclick="openProfile()">👤 Profile</p>
-
-    <p onclick="toggleDarkMode()">🌙 Dark Mode</p>
-
-</div> 
-
+<div id="signupPopup" class="popup">
+    <div class="popup-box">
+        <h2 style="margin:0; color:#b45309; text-align:center;">Create Account</h2>
+        <input type="text" id="signupName" placeholder="Full Name">
+        <div style="display:flex; align-items:center; background:#f5f5f5; border-radius:8px; padding:0 10px; border: 1px solid #ccc; width: 100%;">
+            <input type="text" id="signupEmail" placeholder="Username" style="flex:1; border:none; background:none; outline:none; padding:12px 0; font-size:15px;">
+            <span style="font-weight:bold; color:#555; padding-left:5px;">@mmail.in</span>
+        </div>
+        <input type="password" id="signupPassword" placeholder="Password">
+        <button onclick="createAccount()">Create Account</button>
+        <button onclick="closePopup()" style="background:#6b7280;">Close</button>
     </div>
-
-    <div class="main" id="content">
-
-        <h1>Inbox</h1>
-
-        <hr>
-
-        <p><b>Welcome to MMail</b></p>
-
-        <p>Your private mail system is active.</p>
-
-        <p>No new messages.</p>
-
-    </div>
-
 </div>
+
+<div id="signinPopup" class="popup">
+    <div class="popup-box">
+        <h2 style="margin:0; color:#b45309; text-align:center;">Sign In</h2>
+        <input type="text" id="signinEmail" placeholder="Username / Email">
+        <input type="password" id="signinPassword" placeholder="Password">
+        <button onclick="loginUser()">Login</button>
+        <button onclick="closePopup()" style="background:#6b7280;">Close</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="sidebar">
+        <h2 style="margin-top: 0; color:#b45309;">📧 MMail Core</h2>
+        
+        <div class="auth-btn-group">
+            <button class="auth-btn btn-login" onclick="openPopup('signin')">Sign In</button>
+            <button class="auth-btn btn-register" onclick="openPopup('signup')">Sign Up</button>
+        </div>
+
+        <button class="compose" onclick="openCompose()">✉ Compose</button>
+        
+        <div class="menu">
+            <p onclick="loadInbox()">📥 Inbox</p>
+            <p onclick="loadSent()">📤 Sent</p>
+            <p onclick="loadDrafts()">📝 Drafts</p>
+            <p onclick="toggleDarkMode()">🌙 Dark Mode</p>
+        </div> 
+    </div>
+    
+    <div class="main" id="content">
+        <h1>Inbox</h1><hr>
+        <p>Your Chrome-style private mail system is ready. Click Inbox to download secure mail stream.</p>
+    </div>
+</div>
+
 <script>
+function openPopup(type) {
+    if(type === 'signin') document.getElementById("signinPopup").style.display = "flex";
+    if(type === 'signup') document.getElementById("signupPopup").style.display = "flex";
+}
+
+function closePopup() {
+    document.getElementById("signinPopup").style.display = "none";
+    document.getElementById("signupPopup").style.display = "none";
+}
+
+function createAccount(){
+    let name = document.getElementById("signupName").value.trim();
+    let user = document.getElementById("signupEmail").value.trim();
+    let pass = document.getElementById("signupPassword").value;
+    if(!name || !user || !pass){ alert("Please fill all fields"); return; }
+    alert("Account Created Successfully for " + name);
+    closePopup();
+}
+
+function loginUser(){
+    let email = document.getElementById("signinEmail").value.trim();
+    let pass = document.getElementById("signinPassword").value;
+    if(!email || !pass){ alert("Enter Details"); return; }
+    alert("Login Successful!");
+    closePopup();
+}
 
 async function loadInbox(){
-
-alert("Inbox Clicked");
-
-try{
-
-const res = await fetch("http://localhost:3000/syncInbox");
-const mails = await res.json();
-
-let html="<h1>Inbox</h1><hr>";
-
-if(mails.length===0){
-html+="<p>No messages found.</p>";
-}
-
-mails.forEach(m=>{
-
-html+=`
-<div>
-<b>${m.from || "Unknown"}</b><br>
-${m.subject || ""}
-<hr>
-</div>
-`;
-
-});
-
-document.getElementById("content").innerHTML=html;
-
-}catch(e){
-console.log(e);
-}
-
+    document.getElementById("content").innerHTML = "<h1>📥 Syncing Gmail Server...</h1>";
+    try{
+        const mails = await fetch("http://localhost:3000/syncInbox").then(r=>r.json());
+        let html="<h1>📥 Inbox</h1><hr>";
+        mails.forEach(m => {
+            html+=`<div class="mail-card"><b>From:</b> ${m.from}<br><b>Subject:</b> ${m.subject}<br><p>${m.msg}</p></div>`;
+        });
+        document.getElementById("content").innerHTML=html;
+    }catch(e){ document.getElementById("content").innerHTML="<h3>❌ Backend Offline on Port 3000</h3>"; }
 }
 
 function openCompose(){
-
-alert("Compose Clicked");
-
-document.getElementById("content").innerHTML =
-'<h1>Compose Mail</h1>' +
-'<input id="to" placeholder="To" style="width:100%;padding:10px;"><br><br>' +
-'<input id="cc" placeholder="CC" style="width:100%;padding:10px;"><br><br>' +
-'<input id="subject" placeholder="Subject" style="width:100%;padding:10px;"><br><br>' +
-'<textarea id="msg" style="width:100%;height:250px;"></textarea><br><br>' +
-'<button onclick="sendMail()">Send Mail</button> ' +
-'<button onclick="saveDraft()">Save Draft</button>';
-
+    document.getElementById("content").innerHTML = `
+    <h1>✉ Compose New Mail</h1><hr><br>
+    <input id="to" placeholder="To" style="width:100%;padding:12px; margin-bottom:10px; border:1px solid #ccc; border-radius:8px;">
+    <input id="cc" placeholder="CC" style="width:100%;padding:12px; margin-bottom:10px; border:1px solid #ccc; border-radius:8px;">
+    <input id="subject" placeholder="Subject" style="width:100%;padding:12px; margin-bottom:15px; border:1px solid #ccc; border-radius:8px;">
+    <textarea id="msg" placeholder="Content..." style="width:100%;height:250px; padding:15px; border:1px solid #ccc; border-radius:8px; resize:none;"></textarea><br><br>
+    <button onclick="sendMail()" style="background:#16a34a; color:white; padding:12px 30px;">🚀 Send Mail</button>
+    <button onclick="saveDraft()" style="background:#6b7280; color:white; padding:12px 25px; margin-left:10px;">💾 Save Draft</button>`;
 }
-async function sendMail(){
 
-await fetch("http://localhost:3000/send",{
+async function sendMail() {
+    let to = document.getElementById("to").value.trim();
+    let cc = document.getElementById("cc").value.trim();
+    let subject = document.getElementById("subject").value.trim();
+    let msg = document.getElementById("msg").value;
 
-method:"POST",
+    if(!to) { alert("Recipient 'To' field is required"); return; }
 
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-to:document.getElementById("to").value,
-cc:document.getElementById("cc").value,
-subject:document.getElementById("subject").value,
-msg:document.getElementById("msg").value
-
-})
-
-});
-
-alert("Mail Sent");
-
+    try {
+        let response = await fetch("http://localhost:3000/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ to, cc, subject, msg })
+        });
+        let result = await response.json();
+        if(result.success) {
+            alert("Mail Dispatched Successfully!");
+            loadSent();
+        } else {
+            alert("Mail Error: " + result.error);
+        }
+    } catch(err) {
+        alert("Server Error! Check your express backend server status.");
+    }
 }
 
 async function saveDraft(){
-
-await fetch("http://localhost:3000/draft",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-to:document.getElementById("to").value,
-cc:document.getElementById("cc").value,
-subject:document.getElementById("subject").value,
-msg:document.getElementById("msg").value
-
-})
-
-});
-
-alert("Draft Saved");
-
-}
-
-function loadPrimary(){
-    document.getElementById("content").innerHTML =
-    "<h1>📂 Primary</h1><p>No mails available.</p>";
-}
-
-function loadSocial(){
-    document.getElementById("content").innerHTML =
-    "<h1>👥 Social</h1><p>No social mails available.</p>";
-}
-
-function loadPromotions(){
-    document.getElementById("content").innerHTML =
-    "<h1>🏷 Promotions</h1><p>No promotions available.</p>";
-}
-
-async function loadDrafts(){
-
-const res = await fetch("http://localhost:3000/draft");
-const drafts = await res.json();
-
-let html="<h1>📝 Drafts</h1><hr>";
-
-if(drafts.length===0){
-html+="<p>No drafts available.</p>";
-}
-
-drafts.forEach(d=>{
-html+=`
-<div style="padding:10px;border-bottom:1px solid #ddd;">
-<b>${d.subject || "(No Subject)"}</b><br>
-To: ${d.to || ""}
-</div>
-`;
-});
-
-document.getElementById("content").innerHTML=html;
-
+    try {
+        await fetch("http://localhost:3000/draft",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                to:document.getElementById("to").value,
+                cc:document.getElementById("cc").value,
+                subject:document.getElementById("subject").value,
+                msg:document.getElementById("msg").value
+            })
+        });
+        alert("Draft Safe Synced!");
+        loadDrafts();
+    } catch(err) {
+        alert("Failed to save draft.");
+    }
 }
 
 async function loadSent(){
+    try {
+        const mails = await fetch("http://localhost:3000/sent").then(r=>r.json());
+        let html = "<h1>📤 Sent Box</h1><hr>";
+        mails.forEach(m=>{ html += `<div class="mail-card" style="border-left-color:#16a34a;"><b>To:</b> ${m.to}<br><b>Subject:</b> ${m.subject}<br><p>${m.msg}</p></div>`; });
+        document.getElementById("content").innerHTML = html;
+    } catch(e) { alert("Server connection error."); }
+}
 
-    const res = await fetch("http://localhost:3000/sent");
-    const mails = await res.json();
+async function loadDrafts(){
+    try {
+        const drafts = await fetch("http://localhost:3000/draft").then(r=>r.json());
+        let html="<h1>📝 Drafts</h1><hr>";
+        if(drafts.length === 0) html += "<p>No draft logs available.</p>";
+        // এখানে ফিক্স করা হয়েছে (dataset -> drafts)
+        drafts.forEach((d, i)=>{ 
+            html+=`<div class="mail-card" style="border-left-color:#6b7280;">
+                <b>Subject:</b> ${d.subject || '(No Subject)'}<br>
+                To: ${d.to || 'N/A'}<br><p style="color:gray;">${d.msg || ''}</p>
+                <button onclick="deleteDraft(${i})" style="padding:4px 10px; background:#ef4444; color:white;">Delete</button>
+            </div>`; 
+        });
+        document.getElementById("content").innerHTML=html;
+    } catch(e) { alert("Error loading drafts."); }
+}
 
-    let html = "<h1>📤 Sent Mail</h1><hr>";
-
-    if(mails.length===0){
-        html += "<p>No sent mails yet.</p>";
-    }
-
-    mails.forEach(m=>{
-
-        html += `
-        <div style="padding:10px;border-bottom:1px solid #ddd;">
-            <b>${m.subject || "(No Subject)"}</b><br>
-            To: ${m.to || ""}<br>
-            CC: ${m.cc || ""}<br>
-            ${m.msg || ""}
-        </div>
-        `;
-
+async function deleteDraft(index){
+    await fetch("http://localhost:3000/deleteDraft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ index })
     });
-
-    document.getElementById("content").innerHTML = html;
+    loadDrafts();
 }
 
-function openSearch(){
-    alert("Mail Search Coming Soon");
-}
-
-function openProfile(){
-    alert("User Profile Coming Soon");
-}
-
-function toggleDarkMode(){
-    document.body.classList.toggle("dark");
-}
-
+function toggleDarkMode(){ document.body.classList.toggle("dark"); }
 </script>
-
 </body>
-
 </html>

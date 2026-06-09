@@ -3,345 +3,134 @@
 <head>
 <meta charset="UTF-8">
 <title>MPay</title>
+<style>
+*{ box-sizing: border-box; font-family: Arial, sans-serif; transition: all 0.2s; }
+body { background: #f3f4f6; padding: 40px; margin: 0; }
+.wallet-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; text-align: center; }
+.balance-display { font-size: 55px; font-weight: bold; color: #16a34a; margin: 15px 0; }
+.btn-group { display: flex; gap: 15px; justify-content: center; margin-bottom: 25px; }
+button { padding: 12px 25px; border: none; border-radius: 12px; background: #b45309; color: white; font-weight: bold; cursor: pointer; }
+button:hover { background: #92400e; }
+.btn-secondary { background: #4b5563; }
+.input-field { padding: 12px; width: 100%; max-width: 300px; border: 1px solid #ccc; border-radius: 8px; outline: none; }
+</style>
 </head>
 <body>
-
-<div style="padding:40px;max-width:900px;margin:auto;">
-
-<h1 style="color:#b45309;text-align:center;">
-
-💳 MPay
-</h1>
-
-<div style="
-background:white;
-padding:20px;
-border-radius:15px;
-box-shadow:0 0 10px rgba(0,0,0,0.1);
-margin-bottom:20px;
-text-align:center;
-">
-<h2>Wallet Balance</h2>
-
-<input
-id="walletBalanceText"
-type="number"
-value="0"
-style="
-font-size:60px;
-font-weight:bold;
-color:#16a34a;
-text-align:center;
-border:none;
-background:transparent;
-width:300px;
-outline:none;
-">
-
-</div>
-
-<div style="text-align:center;margin-bottom:20px;">
-
-<button onclick="addMoney()">
-
-Add ₹1000
-
-</button>
-<button onclick="saveBalance()">
-Save Balance
-</button>
-</div>
-
-<div style="
-display:flex;
-gap:15px;
-justify-content:center;
-margin-bottom:25px;
-">
-
-<button onclick="showSendMoney()">
-Send Money
-</button>
-
-<button onclick="showRequestMoney()">
-Request Money
-</button>
-
-<button onclick="showHistory()">
-History
-</button>
-
-</div>
-
-<div id="mpayContent"></div>
-
+<div style="max-width:600px; margin:auto;">
+    <h1 style="color:#b45309; text-align:center;">💳 MPay Wallet</h1>
+    <div class="wallet-card">
+        <h2>Wallet Balance</h2>
+        <div class="balance-display">₹<span id="walletBalanceText">0.00</span></div>
+    </div>
+    <div style="text-align:center; margin-bottom:25px;">
+        <button onclick="addMoney()">➕ Add ₹1000</button>
+    </div>
+    <div class="btn-group">
+        <button class="btn-secondary" onclick="showSendMoney()">📤 Send Money</button>
+        <button class="btn-secondary" onclick="showRequestMoney()">📩 Request Money</button>
+        <button class="btn-secondary" onclick="showHistory()">📜 History</button>
+    </div>
+    <div id="mpayContent"></div>
 </div>
 
 <script>
-
 let walletBalance = 0;
-let transactions = [];
 
-async function saveBalance(){
-
-walletBalance =
-parseFloat(
-document.getElementById(
-"walletBalanceText"
-).value || 0
-);
-
-try{
-
-await fetch(
-"http://localhost:3000/mpayBalance",
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-balance: walletBalance
-})
-}
-);
-
-alert("Balance Saved To Database");
-
-}catch(err){
-
-alert("Server Error");
-
-console.log(err);
-
-return;
-
-}
-
-location.reload();
-
+async function loadWalletData() {
+    try {
+        const response = await fetch("http://localhost:3000/mpay");
+        const data = await response.json();
+        walletBalance = parseFloat(data.balance || 0);
+        document.getElementById("walletBalanceText").innerText = walletBalance.toFixed(2);
+    } catch (err) { document.getElementById("mpayContent").innerHTML = "<p style='color:red; text-align:center;'>⚠️ Express Backend Offline</p>"; }
 }
 
 async function addMoney(){
-
-try{
-
-let response = await fetch(
-"http://localhost:3000/mpayAddMoney",
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-amount:1000
-})
+    try {
+        let res = await fetch("http://localhost:3000/mpayAddMoney", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: 1000 })
+        }).then(r=>r.json());
+        walletBalance = res.balance;
+        document.getElementById("walletBalanceText").innerText = walletBalance.toFixed(2);
+        alert("₹1000 Synced to DB Core!");
+        showHistory();
+    } catch(err) { alert("Server error"); }
 }
-);
-
-let data = await response.json();
-
-walletBalance = data.balance;
-
-document.getElementById(
-"walletBalanceText"
-).value = walletBalance;
-
-alert("₹1000 Added");
-
-location.reload();
-
-}
-catch(err){
-
-alert("Server Error");
-
-console.log(err);
-
-}
-
-}
-
 
 function showSendMoney(){
-
-document.getElementById("mpayContent").innerHTML = `
-
-<h2>Send Money</h2>
-
-<input id="receiver"
-placeholder="Receiver Name"
-style="padding:10px;width:250px;"><br><br>
-
-<input id="amount"
-placeholder="Amount"
-type="number"
-style="padding:10px;width:250px;"><br><br>
-
-<button onclick="sendMoney()">
-Transfer
-</button>
-
-`;
-
+    document.getElementById("mpayContent").innerHTML = `
+    <div style="background:white; padding:20px; border-radius:15px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+        <h3>📤 Send Money</h3>
+        <input id="receiver" class="input-field" placeholder="Receiver ID"><br><br>
+        <input id="amount" class="input-field" type="number" placeholder="Amount (₹)"><br><br>
+        <button onclick="executeSendMoney()">Transfer</button>
+    </div>`;
 }
 
-function sendMoney(){
+async function executeSendMoney() {
+    let receiver = document.getElementById("receiver").value.trim();
+    let amount = parseFloat(document.getElementById("amount").value);
 
-let receiver =
-document.getElementById("receiver").value;
+    if (!receiver || isNaN(amount) || amount <= 0) { alert("Invalid inputs."); return; }
+    if (amount > walletBalance) { alert("Insufficient Balance!"); return; }
 
-let amount =
-parseFloat(
-document.getElementById("amount").value
-);
-
-if(!receiver || !amount){
-if(amount <= 0){
-alert("Invalid Amount");
-return;
-}
-alert("Enter Details");
-return;
-}
-
-if(amount > walletBalance){
-alert("Insufficient Balance");
-return;
-}
-
-walletBalance -= amount;
-
-localStorage.setItem(
-"mpayBalance",
-walletBalance
-);
-
-transactions.push(
-"Sent ₹" + amount + " to " + receiver
-);
-
-localStorage.setItem(
-"mpayHistory",
-JSON.stringify(transactions)
-);
-
-alert("Money Sent");
-
-location.reload();
-
+    try {
+        let targetBalance = walletBalance - amount;
+        await fetch("http://localhost:3000/mpayBalance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ balance: targetBalance })
+        });
+        await fetch("http://localhost:3000/mpayAddMoney", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: -amount }) 
+        });
+        alert(`Sent ₹${amount} to ${receiver}`);
+        document.getElementById("mpayContent").innerHTML = "";
+        loadWalletData();
+    } catch (err) { alert("Transaction connection error"); }
 }
 
 function showRequestMoney(){
-
-document.getElementById("mpayContent").innerHTML = `
-
-<h2>Request Money</h2>
-
-<input id="requestFrom"
-placeholder="Request From"
-style="padding:10px;width:250px;"><br><br>
-
-<input id="requestAmount"
-placeholder="Amount"
-type="number"
-style="padding:10px;width:250px;"><br><br>
-
-<button onclick="requestMoney()">
-Request
-</button>
-
-`;
-
+    document.getElementById("mpayContent").innerHTML = `
+    <div style="background:white; padding:20px; border-radius:15px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+        <h3>📩 Request Money</h3>
+        <input id="requestFrom" class="input-field" placeholder="From name"><br><br>
+        <input id="requestAmount" class="input-field" type="number" placeholder="Amount (₹)"><br><br>
+        <button onclick="executeRequestMoney()">Send Request</button>
+    </div>`;
 }
 
-function requestMoney(){
-
-let person =
-document.getElementById("requestFrom").value;
-
-let amount =
-document.getElementById("requestAmount").value;
-
-if(!person || !amount){
-alert("Enter Details");
-return;
-}
-
-transactions.push(
-"Requested ₹" + amount + " from " + person
-);
-
-localStorage.setItem(
-"mpayHistory",
-JSON.stringify(transactions)
-);
-
-alert("Request Sent");
-
-location.reload();
-
+async function executeRequestMoney() {
+    let person = document.getElementById("requestFrom").value.trim();
+    let amount = parseFloat(document.getElementById("requestAmount").value);
+    if (!person || isNaN(amount) || amount <= 0) { alert("Enter proper details."); return; }
+    try {
+        await fetch("http://localhost:3000/mpayAddMoney", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: 0 }) 
+        });
+        alert(`Request Sent to ${person}`);
+        document.getElementById("mpayContent").innerHTML = "";
+    } catch (err) { alert("Server error"); }
 }
 
 async function showHistory(){
-
-try{
-
-const res = await fetch("http://localhost:3000/mpayHistory");
-
-const transactions = await res.json();
-
-let html = "";
-
-if(transactions.length===0){
-
-html = "No Transactions Found";
-
-}else{
-
-transactions.forEach(item=>{
-
-html += `
-<div style="
-padding:10px;
-border-bottom:1px solid #ddd;
-">
-${item}
-</div>
-`;
-
-});
-
+    try {
+        const res = await fetch("http://localhost:3000/mpayHistory");
+        const logs = await res.json();
+        let html = `<div style="background:white; padding:20px; border-radius:15px; box-shadow:0 2px 10px rgba(0,0,0,0.05);"><h3>📜 Transaction History</h3><hr style='border:none; border-top:1px solid #eee;'>`;
+        if(logs.length === 0) html += "<p>No logs found.</p>";
+        else logs.reverse().forEach(item => { html += `<div style="padding:10px; border-bottom:1px solid #eee;">🔹 ${item}</div>`; });
+        html += `</div>`;
+        document.getElementById("mpayContent").innerHTML = html;
+    } catch(err) { alert("Error loading history registry"); }
 }
-
-document.getElementById("mpayContent").innerHTML = `
-
-<h2>Transaction History</h2>
-
-<div style="
-background:white;
-padding:15px;
-border-radius:10px;
-">
-${html}
-</div>
-
-`;
-
-}catch(err){
-
-alert("History Load Error");
-
-console.log(err);
-
-return;
-
-}
-
-}
-
- 
+window.onload = loadWalletData;
 </script>
-
 </body>
 </html>

@@ -1,276 +1,111 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <title>MCalendar</title>
+<style>
+*{ box-sizing: border-box; font-family: Arial, sans-serif; }
+body { background: #f3f4f6; padding: 20px; margin: 0; }
+.calendar-box { max-width: 750px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,.1); }
+.grid-weekdays div { text-align: center; font-weight: bold; color: #4b5563; padding: 8px 0; }
+.calendar-day { text-align: center; line-height: 45px; height: 45px; border: 1px solid #e5e7eb; border-radius: 8px; }
+.today-highlight { background: #f5d7aa !important; border: 2px solid #b45309 !important; font-weight: bold; }
+.section-wrapper { margin-top: 20px; padding: 15px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; }
+input { padding: 10px; border-radius: 8px; border: 1px solid #ccc; width: calc(100% - 130px); max-width: 350px; }
+button { padding: 10px 20px; background: #b45309; color: white; border: none; border-radius: 8px; cursor: pointer; }
+.data-item { padding: 8px; margin-top: 6px; background: white; border-radius: 6px; border-left: 4px solid #b45309; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+</style>
 </head>
 <body>
-
 <div id="app"></div>
-
 <script>
-
-function openMCalendar(){
-
 const today = new Date();
 
-document.getElementById("app").innerHTML=`
+function openMCalendar(){
+document.getElementById("app").innerHTML = `
+<div class="calendar-box">
+    <h1 style="color:#b45309; text-align:center; margin:0;">📅 MCalendar</h1>
+    <div style="text-align:center; margin: 15px 0; background:#f8fafc; padding:10px; border-radius:10px;">
+        <h2>${today.toDateString()}</h2>
+        <h1 id="clock" style="margin:5px; color:#b45309;">00:00:00</h1>
+    </div>
+    <h3 id="monthYear" style="text-align:center; font-size:22px; margin:10px; color:#92400e;"></h3>
+    <div class="grid-weekdays" style="display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:5px;">
+        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+    </div>
+    <div id="calendarGrid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:6px;"></div>
 
-<h1 style="
-color:#b45309;
-text-align:center;
-font-size:72px;
-">
-📅 MCalendar
-</h1>
+    <div class="section-wrapper">
+        <h2>📝 Add Event</h2> <input id="eventInput" placeholder="Enter Event">
+        <button onclick="saveModuleData('events', 'eventInput', 'eventList')">Add</button>
+        <div id="eventList"></div>
+    </div>
+    <div class="section-wrapper">
+        <h2>Reminders</h2> <input id="reminderInput" placeholder="Reminder">
+        <button onclick="saveModuleData('reminders', 'reminderInput', 'reminderList')">Add</button>
+        <div id="reminderList"></div>
+    </div>
+    <div class="section-wrapper">
+        <h2>Birthdays</h2> <input id="birthdayInput" placeholder="Birthday">
+        <button onclick="saveModuleData('birthdays', 'birthdayInput', 'birthdayList')">Add</button>
+        <div id="birthdayList"></div>
+    </div>
+    <div class="section-wrapper">
+        <h2>Meetings</h2> <input id="meetingInput" placeholder="Meeting">
+        <button onclick="saveModuleData('meetings', 'meetingInput', 'meetingList')">Add</button>
+        <div id="meetingList"></div>
+    </div>
+    <div class="section-wrapper">
+        <h2>To-Do List</h2> <input id="todoInput" placeholder="New Task">
+        <button onclick="saveModuleData('todos', 'todoInput', 'todoList', true)">Add</button>
+        <div id="todoList"></div>
+    </div>
+</div>`;
 
-<div style="
-max-width:700px;
-margin:auto;
-background:white;
-padding:25px;
-border-radius:20px;
-box-shadow:0 0 20px rgba(0,0,0,.15);
-text-align:center;
-">
-
-<h2>
-${today.toDateString()}
-</h2>
-
-<p style="
-font-size:22px;
-color:#555;
-">
-Current Time
-</p>
-
-<h1 id="clock">
-00:00:00
-</h1>
-
-</div>
-<hr style="margin:30px 0;">
-
-<h2 style="text-align:center;">
-📅 Monthly Calendar
-</h2>
-
-<div id="monthYear"></div>
-
-<div style="
-display:grid;
-grid-template-columns:repeat(7,1fr);
-max-width:900px;
-margin:auto;
-font-weight:bold;
-margin-bottom:10px;
-">
-
-<div>Sun</div>
-<div>Mon</div>
-<div>Tue</div>
-<div>Wed</div>
-<div>Thu</div>
-<div>Fri</div>
-<div>Sat</div>
-
-</div>
-
-<div id="calendarGrid"
-style="
-display:grid;
-grid-template-columns:repeat(7,1fr);
-gap:10px;
-max-width:900px;
-margin:auto;
-">
-</div>
-
-<hr style="margin:30px 0;">
-
-<h2>📝 Add Event</h2>
-<input id="eventInput" placeholder="Enter Event">
-
-<button onclick="addEvent()">
-Add Event
-</button>
-
-<div id="eventList"></div>
-
-<hr>
-
-<h2>⏰ Reminder</h2>
-<input id="reminderInput" placeholder="Reminder">
-
-<button onclick="addReminder()">
-Add Reminder
-</button>
-
-<div id="reminderList"></div>
-
-<hr>
-
-<h2>🎂 Birthday Reminder</h2>
-<input id="birthdayInput" placeholder="Birthday">
-
-<button onclick="addBirthday()">
-Add Birthday
-</button>
-
-<div id="birthdayList"></div>
-
-<hr>
-
-<h2>📅 Meeting Schedule</h2>
-<input id="meetingInput" placeholder="Meeting">
-
-<button onclick="addMeeting()">
-Add Meeting
-</button>
-
-<div id="meetingList"></div>
-
-<hr>
-
-<h2>✅ To-Do List</h2>
-<input id="todoInput" placeholder="New Task">
-
-<button onclick="addTodo()">
-Add Task
-</button>
-
-<div id="todoList"></div>
-
-`;
-
-setInterval(()=>{
-
-const now = new Date();
-
-document.getElementById("clock").innerHTML =
-now.toLocaleTimeString();
-
-},1000);
-
-document.getElementById("monthYear").innerHTML =
-today.toLocaleString("default",{
-month:"long"
-}) + " " + today.getFullYear();
-
-loadEvents();
-
-let calendarHTML = "";
-
-for(let i=1; i<=31; i++){
-
-calendarHTML += `
-<div style="
-display:inline-block;
-width:60px;
-height:60px;
-margin:5px;
-border:1px solid #ccc;
-border-radius:8px;
-text-align:center;
-line-height:60px;
-background:white;
-">
-${i}
-</div>
-`;
-
+    setInterval(() => { document.getElementById("clock").innerHTML = new Date().toLocaleTimeString(); }, 1000);
+    document.getElementById("monthYear").innerHTML = today.toLocaleString("default", { month: "long" }) + " " + today.getFullYear();
+    renderDynamicCalendar();
+    
+    loadSavedModuleData('events', 'eventList');
+    loadSavedModuleData('reminders', 'reminderList');
+    loadSavedModuleData('birthdays', 'birthdayList');
+    loadSavedModuleData('meetings', 'meetingList');
+    loadSavedModuleData('todos', 'todoList', true);
 }
 
-document.getElementById("calendarGrid").innerHTML =
-calendarHTML;
-
+function renderDynamicCalendar() {
+    let year = today.getFullYear(); let month = today.getMonth();
+    let firstDayIndex = new Date(year, month, 1).getDay();
+    let totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+    let calendarHTML = "";
+    for (let i = 0; i < firstDayIndex; i++) { calendarHTML += `<div></div>`; }
+    for (let day = 1; day <= totalDaysInMonth; day++) {
+        let isToday = (day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear());
+        calendarHTML += `<div class="calendar-day ${isToday ? 'today-highlight' : ''}">${day}</div>`;
+    }
+    document.getElementById("calendarGrid").innerHTML = calendarHTML;
 }
 
-function addEvent(){
-
-let v =
-document.getElementById("eventInput").value;
-
-if(!v) return;
-
-let events =
-JSON.parse(
-localStorage.getItem("mcalendar_events")
-|| "[]"
-);
-
-events.push(v);
-
-localStorage.setItem(
-"mcalendar_events",
-JSON.stringify(events)
-);
-
-document.getElementById("eventInput").value="";
-
-loadEvents();
-
-document.getElementById("monthYear").innerHTML =
-today.toLocaleString("default", {
-month:"long"
-}) + " " + today.getFullYear();
-
+function saveModuleData(moduleKey, inputId, listId, isTodo = false) {
+    let val = document.getElementById(inputId).value.trim();
+    if (!val) return;
+    let dataset = JSON.parse(localStorage.getItem("mcal_" + moduleKey) || "[]");
+    dataset.push(val);
+    localStorage.setItem("mcal_" + moduleKey, JSON.stringify(dataset));
+    document.getElementById(inputId).value = "";
+    displayDataset(dataset, listId, isTodo);
 }
 
-function loadEvents(){
-
-let events =
-JSON.parse(
-localStorage.getItem("mcalendar_events")
-|| "[]"
-);
-
-let html="";
-
-events.forEach(function(e){
-
-html += `
-<div style="
-padding:8px;
-margin:5px;
-background:#f5f5f5;
-border-radius:8px;
-">
-📌 ${e}
-</div>
-`;
-
-});
-
-document.getElementById("eventList").innerHTML =
-html;
-
+function loadSavedModuleData(moduleKey, listId, isTodo = false) {
+    displayDataset(JSON.parse(localStorage.getItem("mcal_" + moduleKey) || "[]"), listId, isTodo);
 }
 
-function addReminder(){
-let v=document.getElementById("reminderInput").value;
-document.getElementById("reminderList").innerHTML += "<div>"+v+"</div>";
-}
-
-function addBirthday(){
-let v=document.getElementById("birthdayInput").value;
-document.getElementById("birthdayList").innerHTML += "<div>"+v+"</div>";
-}
-
-function addMeeting(){
-let v=document.getElementById("meetingInput").value;
-document.getElementById("meetingList").innerHTML += "<div>"+v+"</div>";
-}
-
-function addTodo(){
-let v=document.getElementById("todoInput").value;
-
-document.getElementById("todoList").innerHTML +=
-"<div><input type='checkbox'> "+v+"</div>";
+function displayDataset(dataset, listId, isTodo) {
+    let html = "";
+    dataset.forEach(item => { html += `<div class="data-item">${isTodo ? "<input type='checkbox' style='width:auto; margin-right:8px;'>" : "📌"} ${item}</div>`; });
+    document.getElementById(listId).innerHTML = html;
 }
 openMCalendar();
-
 </script>
-
 </body>
 </html>

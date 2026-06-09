@@ -5,163 +5,193 @@
 <title>MDrive</title>
 
 <style>
+*{
+    box-sizing: border-box;
+    transition: 0.2s;
+}
 body{
-    font-family:Arial;
-    background:#f3f4f6;
-    padding:40px;
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
+    padding: 40px;
+    margin: 0;
 }
-
 h1{
-    color:#b45309;
+    color: #b45309;
 }
-
+.upload-zone {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
 button{
-    padding:12px 20px;
-    border:none;
-    border-radius:10px;
-    background:#b45309;
-    color:white;
-    cursor:pointer;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #b45309;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    margin-right: 5px;
 }
-
+button:hover{
+    background: #92400e;
+    transform: scale(1.02);
+}
 #fileList{
-    margin-top:20px;
+    margin-top: 20px;
 }
-
 .fileItem{
-    background:white;
-    padding:10px;
-    margin-bottom:10px;
-    border-radius:10px;
+    background: white;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.fileItem:hover{
+    background: #fef3c7;
+    border-left: 4px solid #b45309;
+}
+.btn-delete {
+    background: #ef4444;
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    margin-left: auto;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-delete:hover {
+    background: #dc2626;
 }
 </style>
 
 </head>
 <body>
 
-<h1>📁 MDrive</h1>
+<h1>📁 MDrive Cloud Workspace</h1>
 
-<input type="file" id="fileInput">
-
-<button onclick="saveFile()">
-Upload
-</button>
-<button onclick="createFolder()">
-New Folder
-</button>
+<div class="upload-zone">
+    <input type="file" id="fileInput" style="padding: 10px;">
+    <button onclick="saveFile()">Upload File</button>
+    <button onclick="createFolder()" style="background: #6b7280;">New Folder</button>
+</div>
 
 <div id="fileList"></div>
 
 <script>
-alert("MDrive Loaded");
-let files =
-JSON.parse(localStorage.getItem("mdriveFiles") || "[]");
-
-let folders =
-JSON.parse(localStorage.getItem("mdriveFolders") || "[]");
+let files = JSON.parse(localStorage.getItem("mdriveFiles") || "[]");
+let folders = JSON.parse(localStorage.getItem("mdriveFolders") || "[]");
 
 function createFolder(){
+    let folderName = prompt("Folder Name:");
+    if(!folderName) return;
 
-let folderName =
-prompt("Folder Name");
-
-if(!folderName){
-    return;
-}
-
-folders.push(folderName);
-
-localStorage.setItem(
-    "mdriveFolders",
-    JSON.stringify(folders)
-);
-
-showFiles();
-
+    folders.push(folderName);
+    localStorage.setItem("mdriveFolders", JSON.stringify(folders));
+    showFiles();
 }
 
 async function saveFile(){
-alert(typeof window.electronAPI);
+    let input = document.getElementById("fileInput");
 
-  let input =
-  document.getElementById("fileInput");
+    if(input.files.length === 0){
+        alert("Please select a file first!");
+        return;
+    }
 
-  if(input.files.length===0){
-    alert("Select a file");
-    return;
-  }
+    let file = input.files[0];
 
-  let file =
-  input.files[0];
+    if (!file.path) {
+        alert("Security Error: Cannot read local file path.");
+        return;
+    }
 
-alert(file.name);
-alert(file.path);
-
-console.log(file);
-alert("PATH = " + file.path);
-
-if (!file.path) {
-    alert("file.path is undefined");
-    return;
+    if (window.apiBridge && window.apiBridge.sendToBackend) {
+        try {
+            let result = await window.apiBridge.sendToBackend("save-file", file.path);
+            
+            if(result && result.success) {
+                // ডুপ্লিকেট এন্ট্রি আটকানোর জন্য চেক (যদি একই নামের ফাইল আগে থেকেই পুশ করা থাকে)
+                let isDuplicate = files.some(f => f.name === result.fileName && f.path === result.path);
+                
+                if(!isDuplicate) {
+                    files.push({
+                        name: result.fileName,
+                        path: result.path
+                    });
+                    localStorage.setItem("mdriveFiles", JSON.stringify(files));
+                    showFiles();
+                    alert("File Saved inside mdrive folder successfully!");
+                } else {
+                    alert("This file is already uploaded to your workspace!");
+                }
+            } else {
+                alert("Error saving file: " + (result.error || "Unknown Error"));
+            }
+        } catch (err) {
+            alert("IPC Communication Failed: " + err.message);
+        }
+    } else {
+        alert("Electron API Bridge missing. Open inside Electron Container.");
+    }
 }
-  let result =
-  await window.electronAPI.saveFile(
-    file.path
-  );
-console.log(result);
-alert(JSON.stringify(result));
 
-  files.push({
-    name: result.fileName,
-    path: result.path
-  });
-
-  localStorage.setItem(
-    "mdriveFiles",
-    JSON.stringify(files)
-  );
-
-  showFiles();
-
-  alert("File Saved");
+function removeFolder(index) {
+    if(confirm("Are you sure you want to remove this folder?")) {
+        folders.splice(index, 1);
+        localStorage.setItem("mdriveFolders", JSON.stringify(folders));
+        showFiles();
+    }
 }
 
-showFiles();
-console.log(files);
-alert("File Saved");
-
+function removeFile(index) {
+    if(confirm("Are you sure you want to remove this file?")) {
+        files.splice(index, 1);
+        localStorage.setItem("mdriveFiles", JSON.stringify(files));
+        showFiles();
+    }
+}
 
 function showFiles(){
+    let html = "";
 
-let html="";
+    // ফোল্ডার ফিল্টারিং ও রেন্ডারিং
+    folders.forEach((folder, index) => {
+        if(folder && folder !== "undefined") {
+            html += `
+            <div class="fileItem">
+                📁 <b>${folder}</b>
+                <button class="btn-delete" onclick="event.stopPropagation(); removeFolder(${index})">Delete</button>
+            </div>
+            `;
+        }
+    });
 
-folders.forEach(folder=>{
+    // ফাইল ফিল্টারিং (undefined এবং নাল অবজেক্ট প্রোটেকশনসহ)
+    files.forEach((file, index) => {
+        if (file && file.name && file.path && file.name !== "undefined" && file.name !== "null") {
+            let safePath = file.path.replace(/\\/g, "/");
+            html += `
+            <div class="fileItem" onclick="window.open('file:///${safePath}')">
+                <span>📄 ${file.name}</span>
+                <button class="btn-delete" onclick="event.stopPropagation(); removeFile(${index})">Delete</button>
+            </div>
+            `;
+        }
+    });
 
-html += `
-<div class="fileItem">
-📁 ${folder}
-</div>
-`;
-
-});
-
-files.forEach(file=>{
-
-html += `
-<div class="fileItem"
-onclick="window.open('file:///${file.path.replaceAll("\\","/")}')">
-📄 ${file.name}
-</div>
-`;
-
-});
-
-document.getElementById("fileList").innerHTML =
-html;
-
-
+    document.getElementById("fileList").innerHTML = html ? html : "<p style='color:gray; padding-left:10px;'>Your drive storage is empty.</p>";
 }
 
+// ইনিশিয়াল কল
+showFiles();
 </script>
 
 </body>
