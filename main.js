@@ -9,14 +9,16 @@ function createWindow() {
     title: "MBrowser",
     icon: path.join(__dirname, "mbrowser-logo.ico"),
 
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-      webviewTag: true,         // Required for your <webview> browser component
-      webSecurity: true,        // FIXED: Enforces standard web security rules
-      allowRunningInsecureContent: false // FIXED: Prevents loading insecure HTTP assets
-    }
+  webPreferences: {
+    preload: path.join(__dirname, "preload.js"),
+
+    contextIsolation: false,
+    nodeIntegration: true,
+
+    webviewTag: true,
+    webSecurity: false,
+    allowRunningInsecureContent: true
+}  
   });
 
   win.loadFile("index.html");

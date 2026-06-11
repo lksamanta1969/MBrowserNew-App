@@ -21,9 +21,33 @@ body{ margin:0; font-family:Arial; background:#f1f1f1; overflow:hidden; }
 webview{ width:100%; height:calc(100vh - 140px); display:none; background:white; }
 
 /* Apps menu design */
-.apps-menu{ display:none; position:fixed; top:85px; right:20px; background:white; padding:15px; border-radius:20px; box-shadow:0 5px 20px rgba(0,0,0,0.2); flex-direction:column; gap:10px; z-index:999999; }
+.apps-menu{
+ display:none;
+ position:fixed;
+ top:85px;
+ right:20px;
+ background:white;
+ padding:15px;
+ border-radius:20px;
+ box-shadow:0 5px 20px rgba(0,0,0,0.2);
+ flex-direction:column;
+ gap:10px;
+ z-index:99999999;
+ border:3px solid red;
+}
 .app{ padding:12px; border-radius:10px; cursor:pointer; font-size:20px; color:#333;}
-.app:hover{ background:#f1f1f1; color:#b45309;}
+.app:hover{ background:#f1f1f1; color:#b45309;
+}
+
+#appsBtn{
+    font-size:24px;
+    padding:0 18px;
+    background:#fafafa;
+    color:#333;
+    border:none;
+    border-radius:25px;
+    cursor:pointer;
+}
 </style>
 </head>
 <body>
@@ -50,7 +74,7 @@ webview{ width:100%; height:calc(100vh - 140px); display:none; background:white;
       
       <input id="url" placeholder="Search Google or Enter URL" onkeypress="if(event.key==='Enter'){loadSite()}">
       
-      <button onclick="toggleApps()" style="font-size: 20px; padding: 0 18px; background:#fafafa; color:#333;">⣿</button>
+    <button id="appsBtn" onclick="toggleApps()">⋮</button>
       <button onclick="loadSite()">Go</button>
     </div>
   </div>
@@ -69,17 +93,44 @@ webview{ width:100%; height:calc(100vh - 140px); display:none; background:white;
 const browser = document.getElementById("browser");
 let onHomePage = true;
 
-function goBack() { if (!onHomePage && browser.canGoBack()) browser.goBack(); }
-function goForward() { if (!onHomePage && browser.canGoForward()) browser.goForward(); }
-function refreshPage() { if (!onHomePage) browser.reload(); }
+function goBack() {
+    if (onHomePage) return;
+
+    if (browser.canGoBack()) {
+        browser.goBack();
+    } else {
+        lastPageBeforeHome = browser.getURL();
+
+        browser.style.display = "none";
+        document.getElementById("home").style.display = "block";
+        document.getElementById("url").value = "";
+        onHomePage = true;
+    }
+}
+
+function goForward() {
+
+    if (onHomePage && lastPageBeforeHome) {
+        document.getElementById("home").style.display = "none";
+        browser.style.display = "flex";
+        browser.src = lastPageBeforeHome;
+        onHomePage = false;
+        return;
+    }
+
+    if (!onHomePage && browser.canGoForward()) {
+        browser.goForward();
+    }
+}
 
 function openApp(appName) {
-    toggleApps(); 
+    toggleApps();
     document.getElementById("home").style.display = "none";
     browser.style.display = "flex";
     onHomePage = false;
-    document.getElementById("url").value = "mbrowser://" + appName;
-    browser.src = `./apps/${appName}.html`;
+
+   browser.src = "http://localhost:3000/apps/" + appName + ".html";
+   console.log("OPENING:", "http://localhost:3000/apps/" + appName + ".html");
 }
 
 function loadSite(){
@@ -113,9 +164,14 @@ function homeSearch(){
     loadSite();
 }
 
-function toggleApps(){
-    let menu = document.getElementById("appsMenu");
-    menu.style.display = (menu.style.display === "flex") ? "none" : "flex";
+function toggleApps() {
+    const menu = document.getElementById("appsMenu");
+
+    if (menu.style.display === "flex") {
+        menu.style.display = "none";
+    } else {
+        menu.style.display = "flex";
+    }
 }
 
 window.onload = function(){
