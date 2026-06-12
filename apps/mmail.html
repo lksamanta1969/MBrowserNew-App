@@ -89,11 +89,16 @@ button{ padding:10px 15px; border:none; border-radius:8px; cursor:pointer; margi
         <p>Your Chrome-style private mail system is ready. Click Inbox to download secure mail stream.</p>
     </div>
 </div>
-
+    
 <script>
+
+let editingDraftIndex = -1;
+
 function openPopup(type) {
-    if(type === 'signin') document.getElementById("signinPopup").style.display = "flex";
-    if(type === 'signup') document.getElementById("signupPopup").style.display = "flex";
+    if(type === 'signin')
+        document.getElementById("signinPopup").style.display = "flex";
+    if(type === 'signup')
+        document.getElementById("signupPopup").style.display = "flex";
 }
 
 function closePopup() {

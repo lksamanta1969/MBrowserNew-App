@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
+const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
@@ -12,7 +13,7 @@ function createWindow() {
   webPreferences: {
     preload: path.join(__dirname, "preload.js"),
 
-    contextIsolation: false,
+   contextIsolation: true,
     nodeIntegration: true,
 
     webviewTag: true,
@@ -46,6 +47,20 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+
+  const serverProcess = spawn("node", ["server.js"], {
+    cwd: __dirname,
+    shell: true
+  });
+
+  serverProcess.stdout.on("data", (data) => {
+    console.log("[SERVER]", data.toString());
+  });
+
+  serverProcess.stderr.on("data", (data) => {
+    console.error("[SERVER ERROR]", data.toString());
+  });
+
   createWindow();
 
   app.on("activate", () => {
