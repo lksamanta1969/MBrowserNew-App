@@ -1,12 +1,12 @@
 {
-  "name": "mbrowsernew",
+  "name": "mbrowser",
   "version": "1.0.0",
+  "description": "MBrowser - Electron Browser with MMail, MDrive, MNotes, MPay and MTube",
+  "author": "Lakshmi Kanta Samanta",
+  "license": "MIT",
   "main": "main.js",
   "scripts": {
     "start": "electron ."
-  },
-  "devDependencies": {
-    "electron": "^30.0.0"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
@@ -14,5 +14,8 @@
     "firebase": "^12.14.0",
     "imap": "^0.8.19",
     "mailparser": "^3.9.9"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0"
   }
 }
