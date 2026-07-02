@@ -129,8 +129,10 @@ function openApp(appName) {
     browser.style.display = "flex";
     onHomePage = false;
 
-   browser.src = "http://localhost:3000/apps/" + appName + ".html";
-   console.log("OPENING:", "http://localhost:3000/apps/" + appName + ".html");
+    const appUrl = "http://localhost:3000/apps/" + appName + "/index.html";
+
+    browser.src = appUrl;
+    console.log("OPENING:", appUrl);
 }
 
 function loadSite(){

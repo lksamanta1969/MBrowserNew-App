@@ -21,6 +21,20 @@ button { padding: 10px 20px; background: #b45309; color: white; border: none; bo
 <script>
 const today = new Date();
 
+function formatTime(time24) {
+    if (!time24) return "";
+
+    const [hour, minute] = time24.split(":");
+    const d = new Date();
+    d.setHours(hour, minute);
+
+    return d.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+    });
+}
+
 function openMCalendar(){
 document.getElementById("app").innerHTML = `
 <div class="calendar-box">
@@ -35,11 +49,22 @@ document.getElementById("app").innerHTML = `
     </div>
     <div id="calendarGrid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:6px;"></div>
 
-    <div class="section-wrapper">
-        <h2>📝 Add Event</h2> <input id="eventInput" placeholder="Enter Event">
-        <button onclick="saveModuleData('events', 'eventInput', 'eventList')">Add</button>
-        <div id="eventList"></div>
-    </div>
+   <div class="section-wrapper">
+    <h2>📝 Add Event</h2>
+
+    <input type="text" id="eventTitle" placeholder="Event Title"><br><br>
+
+    <input type="date" id="eventDate"><br><br>
+
+    <input type="time" id="eventTime"><br><br>
+
+<input type="text" id="eventLocation" placeholder="Location / Gate"><br><br>
+
+    <button onclick="saveEvent()">Save Event</button>
+
+    <div id="eventList"></div>
+
+</div> 
     <div class="section-wrapper">
         <h2>Reminders</h2> <input id="reminderInput" placeholder="Reminder">
         <button onclick="saveModuleData('reminders', 'reminderInput', 'reminderList')">Add</button>
@@ -86,6 +111,41 @@ function renderDynamicCalendar() {
     document.getElementById("calendarGrid").innerHTML = calendarHTML;
 }
 
+function saveEvent() {
+
+    const title = document.getElementById("eventTitle").value.trim();
+    const date = document.getElementById("eventDate").value;
+    const time = document.getElementById("eventTime").value;
+    const location = document.getElementById("eventLocation").value.trim();
+
+    if (!title || !date) {
+        alert("Please enter Event Title and Date");
+        return;
+    }
+
+    let events = JSON.parse(localStorage.getItem("mcal_events") || "[]");
+    
+    console.log({
+    title,
+    date,
+    time,
+    location
+     });
+
+    events.push({
+        title,
+        date,
+        time,
+        location
+    });
+
+    localStorage.setItem("mcal_events", JSON.stringify(events));
+
+    displayDataset(events.map(e => `📅 ${e.date} | 🕒 ${formatTime(e.time)} | 📍 ${e.location}<br><strong>${e.title}</strong>`), "eventList", false);
+    
+    alert("Event Saved");
+}
+
 function saveModuleData(moduleKey, inputId, listId, isTodo = false) {
     let val = document.getElementById(inputId).value.trim();
     if (!val) return;
@@ -100,9 +160,21 @@ function loadSavedModuleData(moduleKey, listId, isTodo = false) {
     displayDataset(JSON.parse(localStorage.getItem("mcal_" + moduleKey) || "[]"), listId, isTodo);
 }
 
-function displayDataset(dataset, listId, isTodo) {
+function displayDataset(dataset, listId, isTodo = false) {
     let html = "";
-    dataset.forEach(item => { html += `<div class="data-item">${isTodo ? "<input type='checkbox' style='width:auto; margin-right:8px;'>" : "📌"} ${item}</div>`; });
+
+    dataset.forEach((item, index) => {
+        html += `
+        <div class="data-item">
+            ${isTodo ? `<input type="checkbox" style="margin-right:8px;">` : "📌 "}
+            ${item}
+            <button onclick="deleteItem('${listId}', ${index})"
+                style="float:right;background:#d9534f;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;">
+                Delete
+            </button>
+        </div>`;
+    });
+
     document.getElementById(listId).innerHTML = html;
 }
 openMCalendar();
