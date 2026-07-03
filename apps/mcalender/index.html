@@ -91,11 +91,24 @@ document.getElementById("app").innerHTML = `
     document.getElementById("monthYear").innerHTML = today.toLocaleString("default", { month: "long" }) + " " + today.getFullYear();
     renderDynamicCalendar();
     
-    loadSavedModuleData('events', 'eventList');
-    loadSavedModuleData('reminders', 'reminderList');
-    loadSavedModuleData('birthdays', 'birthdayList');
-    loadSavedModuleData('meetings', 'meetingList');
-    loadSavedModuleData('todos', 'todoList', true);
+const events = JSON.parse(localStorage.getItem("mcal_events") || "[]");
+
+console.log("EVENTS =", events);
+console.table(events);
+
+displayDataset(
+    events.map(e =>
+        `📅 ${e.date} | 🕒 ${formatTime(e.time)} | 📍 ${e.location}<br><strong>${e.title}</strong>`
+    ),
+    "eventList",
+    false
+);
+
+loadSavedModuleData('reminders', 'reminderList');
+loadSavedModuleData('birthdays', 'birthdayList');
+loadSavedModuleData('meetings', 'meetingList');
+loadSavedModuleData('todos', 'todoList', true);
+
 }
 
 function renderDynamicCalendar() {
@@ -124,25 +137,29 @@ function saveEvent() {
     }
 
     let events = JSON.parse(localStorage.getItem("mcal_events") || "[]");
-    
-    console.log({
-    title,
-    date,
-    time,
-    location
-     });
 
     events.push({
-        title,
-        date,
-        time,
-        location
+        title: title,
+        date: date,
+        time: time,
+        location: location
     });
 
     localStorage.setItem("mcal_events", JSON.stringify(events));
 
-    displayDataset(events.map(e => `📅 ${e.date} | 🕒 ${formatTime(e.time)} | 📍 ${e.location}<br><strong>${e.title}</strong>`), "eventList", false);
-    
+    displayDataset(
+        events.map(e =>
+            `📅 ${e.date} | 🕒 ${formatTime(e.time)} | 📍 ${e.location}<br><strong>${e.title}</strong>`
+        ),
+        "eventList",
+        false
+    );
+
+    document.getElementById("eventTitle").value = "";
+    document.getElementById("eventDate").value = "";
+    document.getElementById("eventTime").value = "";
+    document.getElementById("eventLocation").value = "";
+
     alert("Event Saved");
 }
 
@@ -167,7 +184,7 @@ function displayDataset(dataset, listId, isTodo = false) {
         html += `
         <div class="data-item">
             ${isTodo ? `<input type="checkbox" style="margin-right:8px;">` : "📌 "}
-            ${item}
+            ${item || ""}
             <button onclick="deleteItem('${listId}', ${index})"
                 style="float:right;background:#d9534f;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;">
                 Delete
@@ -177,7 +194,25 @@ function displayDataset(dataset, listId, isTodo = false) {
 
     document.getElementById(listId).innerHTML = html;
 }
-openMCalendar();
+
 </script>
+
+<script src="core/StorageService.js"></script>
+<script src="core/CrudEngine.js"></script>
+
+<script src="models/EventModel.js"></script>
+
+<script src="modules/Events.js"></script>
+
+<script src="app.js"></script>
+
+<script>
+    openMCalendar();
+
+</script>
+
+</script>
+
 </body>
+
 </html>
