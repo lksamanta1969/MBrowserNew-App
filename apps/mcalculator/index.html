@@ -18,6 +18,8 @@ button:hover { background: #cbd5e1; transform: scale(1.02); }
 <body>
 <div id="app"></div>
 <script>
+let calcHistory = JSON.parse(localStorage.getItem("mcalc_history") || "[]");   
+ let lastExpression = "";
 function loadCalculator(){
 document.getElementById("app").innerHTML = `
 <h1 style="color:#b45309; text-align:center;">🧮 MCalculator Pro</h1>
@@ -61,6 +63,9 @@ document.getElementById("app").innerHTML = `
         <b>History</b><br><br>
     </div>
 </div>`;
+document.getElementById("calcHistory").innerHTML =
+    "<b>History</b><br><br>" +
+    calcHistory.slice(0, 8).join("<br>");
 }
 
 function calcAdd(val){ document.getElementById("calcDisplay").value += val; }
@@ -90,24 +95,52 @@ function calcSqrt(){
 }
 
 function calcFunc(type){
-    let d = document.getElementById("calcDisplay"); let v = evaluateCurrentDisplay();
-    if(v === null || d.value === "") { alert("Enter expression first"); return; }
-    if(type === "sin") d.value = Math.sin(v * Math.PI / 180);
-    if(type === "cos") d.value = Math.cos(v * Math.PI / 180);
-    if(type === "tan") d.value = Math.tan(v * Math.PI / 180);
-    if(type === "log") d.value = Math.log10(v);
-    if(type === "ln") d.value = Math.log(v);
+    let d = document.getElementById("calcDisplay");
+    let input = d.value;
+    let v = evaluateCurrentDisplay();
+
+    if (v === null || input === "") {
+        alert("Enter expression first");
+        return;
+    }
+
+    let result;
+
+    if(type === "sin") result = Math.sin(v * Math.PI / 180);
+    if(type === "cos") result = Math.cos(v * Math.PI / 180);
+    if(type === "tan") result = Math.tan(v * Math.PI / 180);
+    if(type === "log") result = Math.log10(v);
+    if(type === "ln")  result = Math.log(v);
+
+    d.value = result;
+
+    calcHistory.unshift(type + "(" + input + ") = " + result);
+    localStorage.setItem("mcalc_history", JSON.stringify(calcHistory));
+
+    document.getElementById("calcHistory").innerHTML =
+        "<b>History</b><br><br>" +
+        calcHistory.slice(0, 8).join("<br>");
 }
 
-let calcHistory = [];
+
 function calcResult(){
     let display = document.getElementById("calcDisplay"); let rawExpr = display.value;
     if(!rawExpr) return;
     try {
         let expr = rawExpr.replace(/×/g, "*").replace(/÷/g, "/").replace(/%/g, "/100").replace(/\^/g, "**");
         let result = Function('"use strict"; return (' + expr + ')')();
-        calcHistory.unshift(rawExpr + " = " + result);
-        document.getElementById("calcHistory").innerHTML = "<b>History</b><br><br>" + calcHistory.slice(0, 8).join("<br>");
+        let historyExpr = rawExpr
+    .replace(/\*\*/g, "^")
+    .replace(/×/g, "×")
+    .replace(/÷/g, "÷");
+
+calcHistory.unshift(historyExpr + " = " + result);
+
+localStorage.setItem("mcalc_history", JSON.stringify(calcHistory));
+
+document.getElementById("calcHistory").innerHTML =
+"<b>History</b><br><br>" +
+calcHistory.slice(0, 8).join("<br>");
         display.value = result;
     } catch (err) { alert("Invalid Calculation"); }
 }
