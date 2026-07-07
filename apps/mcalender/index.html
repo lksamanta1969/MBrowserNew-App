@@ -195,6 +195,49 @@ function displayDataset(dataset, listId, isTodo = false) {
     document.getElementById(listId).innerHTML = html;
 }
 
+function deleteItem(listId, index) {
+
+    let storageKey = "";
+
+    switch (listId) {
+        case "eventList":
+            storageKey = "mcal_events";
+            break;
+        case "reminderList":
+            storageKey = "mcal_reminders";
+            break;
+        case "birthdayList":
+            storageKey = "mcal_birthdays";
+            break;
+        case "meetingList":
+            storageKey = "mcal_meetings";
+            break;
+        case "todoList":
+            storageKey = "mcal_todos";
+            break;
+        default:
+            return;
+    }
+
+    let data = JSON.parse(localStorage.getItem(storageKey) || "[]");
+
+    data.splice(index, 1);
+
+    localStorage.setItem(storageKey, JSON.stringify(data));
+
+   if (listId === "eventList") {
+    displayDataset(
+        data.map(e => {
+            return `📅 ${e.date} | 🕒 ${formatTime(e.time)} | 📍 ${e.location}<br><strong>${e.title}</strong>`;
+        }),
+        listId,
+        false
+    );
+} else {
+    displayDataset(data, listId, listId === "todoList");
+}
+}
+
 </script>
 
 <script src="core/StorageService.js"></script>
