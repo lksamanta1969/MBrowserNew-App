@@ -1,0 +1,63 @@
+
+body{ margin:0; font-family:Arial; background:#f1f1f1; overflow:hidden; }
+.header{ background:#b45309; padding:8px; }
+.tabs{ display:flex; align-items:center; margin-bottom:8px; }
+.tab{ background:#f5d7aa; border:none; padding:10px 20px; border-radius:12px 12px 0 0; font-size:14px; cursor:pointer;}
+.addtab{ margin-left:5px; border:none; background:transparent; font-size:24px; color:white; cursor:pointer;}
+.topbar{ background:#92400e; padding:10px; display:flex; align-items:center; gap:8px; border-radius:10px; }
+.topbar button{ height:40px; border:none; border-radius:20px; padding:0 15px; cursor:pointer; font-weight:bold;}
+#url{ flex:1; height:40px; border:none; border-radius:25px; padding:0 20px; font-size:16px; outline:none;}
+.home{ text-align:center; padding-top:100px; background:#ffffff; min-height:100vh; }
+.home h1{ font-size:80px; color:#b85a17; font-weight:700; margin-top:0; margin-bottom:10px; }
+.home p{ font-size:24px; color:#555; }
+#homesearch{ width:600px; max-width:85%; padding:15px; border-radius:30px; border:1px solid #d4a373; box-shadow:0 4px 12px rgba(184,90,23,0.15); font-size:18px; text-align:center; outline:none; }
+#homesearch:focus{ border:2px solid #b85a17; box-shadow:0 0 12px rgba(184,90,23,0.25); }
+#googleBtn{ margin-top:20px; padding:12px 25px; border:none; border-radius:25px; background:#4285F4; color:white; font-size:16px; cursor:pointer; display:block; margin:20px auto; }
+#homeLogo{ width:260px; height:260px; object-fit:contain; display:block; margin:0 auto -50px auto; }
+webview{ width:100%; height:calc(100vh - 140px); display:none; background:white; }
+
+/* Apps menu design */
+.apps-menu{
+    display: none;
+    position: fixed;
+    top: 85px;
+    right: 20px;
+
+    width: 250px;
+    padding: 15px;
+
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 8px 25px rgba(0,0,0,.25);
+
+    flex-direction: column;
+    gap: 10px;
+
+    z-index: 999999;
+}
+.app{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 12px;
+    font-size: 20px;
+    color: #333;
+    cursor: pointer;
+    border-radius: 10px;
+}
+
+.app:hover{
+    background: #f1f1f1;
+    color: #b45309;
+}
+
+#appsBtn{
+    font-size:24px;
+    padding:0 18px;
+    background:#fafafa;
+    color:#333;
+    border:none;
+    border-radius:25px;
+    cursor:pointer;
+}

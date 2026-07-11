@@ -108,14 +108,19 @@ async function saveFile(){
 
     let file = input.files[0];
 
-    if (!file.path) {
-        alert("Security Error: Cannot read local file path.");
-        return;
-    }
+console.log("saveFile() called");
+console.log("FILES:", input.files);
+console.log("FILE:", file);
 
-    if (window.apiBridge && window.apiBridge.sendToBackend) {
+if (!file.path) {
+    console.log("FILE PATH:", file.path);
+    alert("Security Error: Cannot read local file path.");
+    return;
+}
+
+    if (window.electronAPI) {
         try {
-            let result = await window.apiBridge.sendToBackend("save-file", file.path);
+            let result = await window.electronAPI.saveFile(file.path);
             
             if(result && result.success) {
                 // ডুপ্লিকেট এন্ট্রি আটকানোর জন্য চেক (যদি একই নামের ফাইল আগে থেকেই পুশ করা থাকে)

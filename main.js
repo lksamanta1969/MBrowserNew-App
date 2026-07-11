@@ -69,14 +69,16 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+    if (process.platform !== "darwin") {
+        app.quit();
+    }
 });
 
 // mdrive-এর জন্য ফাইল সেভ করার হ্যান্ডলার (Safe and untouched)
+
 ipcMain.handle("save-file", async (event, sourcePath) => {
   try {
+   console.log("SOURCE:", sourcePath); 
     const fileName = path.basename(sourcePath);
     const targetDir = path.join(__dirname, "mdrive");
     const destPath = path.join(targetDir, fileName);
@@ -87,9 +89,18 @@ ipcMain.handle("save-file", async (event, sourcePath) => {
 
     await fs.promises.copyFile(sourcePath, destPath);
 
+console.log("DEST:", destPath);
+console.log("COPY SUCCESS");
+
     return { success: true, fileName, path: destPath };
+
   } catch (error) {
-    console.error("File save error:", error);
-    return { success: false, error: error.message };
-  }
+    console.error("FULL ERROR:", error);
+
+    return {
+        success: false,
+        error: error.message
+    };
+}
+
 });
