@@ -99,9 +99,13 @@ function createFolder(){
 }
 
 async function saveFile(){
+
     let input = document.getElementById("fileInput");
 
+    console.log("saveFile() called");
+
     if(input.files.length === 0){
+    
         alert("Please select a file first!");
         return;
     }
@@ -112,9 +116,10 @@ console.log("saveFile() called");
 console.log("FILES:", input.files);
 console.log("FILE:", file);
 
+console.log("FILE PATH:", file.path);
+
 if (!file.path) {
-    console.log("FILE PATH:", file.path);
-    alert("Security Error: Cannot read local file path.");
+    alert("File path not available.");
     return;
 }
 
