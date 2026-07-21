@@ -86,22 +86,44 @@ button:hover{
 <div id="fileList"></div>
 
 <script>
+
+ console.log("SCRIPT START");
+alert("SCRIPT START");
+
+ window.onerror = function(msg, url, line, col, err) {
+    console.error("JS ERROR:", msg);
+    console.error("LINE:", line);
+    console.error("COLUMN:", col);
+};
+
 let files = JSON.parse(localStorage.getItem("mdriveFiles") || "[]");
 let folders = JSON.parse(localStorage.getItem("mdriveFolders") || "[]");
 
-function createFolder(){
-    let folderName = prompt("Folder Name:");
-    if(!folderName) return;
+console.log("FILES =", files);
+console.log("FOLDERS =", folders);
 
-    folders.push(folderName);
-    localStorage.setItem("mdriveFolders", JSON.stringify(folders));
-    showFiles();
+async function createFolder() {
+
+    const folderName = "New Folder";
+    if (!folderName) return;
+
+    const result = await window.electronAPI.createFolder(folderName);
+
+    if (result.success) {
+        folders.push(folderName);
+        localStorage.setItem("mdriveFolders", JSON.stringify(folders));
+        showFiles();
+        alert(result.message);
+    } else {
+        alert(result.message);
+    }
 }
 
 async function saveFile(){
 
     let input = document.getElementById("fileInput");
 
+    alert("saveFile() called");
     console.log("saveFile() called");
 
     if(input.files.length === 0){
@@ -112,7 +134,7 @@ async function saveFile(){
 
     let file = input.files[0];
 
-console.log("saveFile() called");
+
 console.log("FILES:", input.files);
 console.log("FILE:", file);
 
@@ -125,7 +147,7 @@ if (!file.path) {
 
     if (window.electronAPI) {
         try {
-            let result = await window.electronAPI.saveFile(file.path);
+            let result = await window.electronAPI.saveFile(file.path, currentFolder);
             
             if(result && result.success) {
                 // ডুপ্লিকেট এন্ট্রি আটকানোর জন্য চেক (যদি একই নামের ফাইল আগে থেকেই পুশ করা থাকে)
@@ -133,9 +155,10 @@ if (!file.path) {
                 
                 if(!isDuplicate) {
                     files.push({
-                        name: result.fileName,
-                        path: result.path
-                    });
+    name: result.fileName,
+    path: result.path,
+    folder: currentFolder || ""
+});
                     localStorage.setItem("mdriveFiles", JSON.stringify(files));
                     showFiles();
                     alert("File Saved inside mdrive folder successfully!");
@@ -173,10 +196,12 @@ function showFiles(){
     let html = "";
 
     // ফোল্ডার ফিল্টারিং ও রেন্ডারিং
+    console.log("Folders =", folders);
     folders.forEach((folder, index) => {
+        
         if(folder && folder !== "undefined") {
             html += `
-            <div class="fileItem">
+        <div class="fileItem" onclick="openFolder('${folder}')">
                 📁 <b>${folder}</b>
                 <button class="btn-delete" onclick="event.stopPropagation(); removeFolder(${index})">Delete</button>
             </div>
@@ -185,7 +210,10 @@ function showFiles(){
     });
 
     // ফাইল ফিল্টারিং (undefined এবং নাল অবজেক্ট প্রোটেকশনসহ)
-    files.forEach((file, index) => {
+   const visibleFiles = files.filter(f => (f.folder || "") === currentFolder);
+    console.log("Visible Files =", visibleFiles);
+
+visibleFiles.forEach((file, index) => {
         if (file && file.name && file.path && file.name !== "undefined" && file.name !== "null") {
             let safePath = file.path.replace(/\\/g, "/");
             html += `
@@ -201,6 +229,17 @@ function showFiles(){
 }
 
 // ইনিশিয়াল কল
+let currentFolder = "";
+
+window.openFolder = function(folderName) {
+    currentFolder = folderName;
+
+    console.log("Current Folder =", currentFolder);
+    console.log(files);
+
+    showFiles();
+}
+
 showFiles();
 </script>
 

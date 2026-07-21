@@ -41,6 +41,7 @@ function openApp(appName) {
     const appUrl = "http://localhost:3000/apps/" + appName + "/index.html";
 
     browser.src = appUrl;
+
     console.log("OPENING:", appUrl);
 }
 
