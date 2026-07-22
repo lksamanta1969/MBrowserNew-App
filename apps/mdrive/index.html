@@ -61,7 +61,6 @@ button:hover{
     padding: 6px 12px;
     font-size: 13px;
     border-radius: 6px;
-    margin-left: auto;
     border: none;
     color: white;
     cursor: pointer;
@@ -70,12 +69,121 @@ button:hover{
 .btn-delete:hover {
     background: #dc2626;
 }
+.btn-rename {
+    background: #6b7280;
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-rename:hover {
+    background: #4b5563;
+}
+.btn-open {
+    background: #2563eb;
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-open:hover {
+    background: #1d4ed8;
+}
+.btn-download {
+    background: #059669;
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-download:hover {
+    background: #047857;
+}
+.item-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+}
+.breadcrumb {
+    margin-bottom: 16px;
+    font-size: 15px;
+    color: #374151;
+}
+.crumb {
+    cursor: pointer;
+    color: #b45309;
+    font-weight: bold;
+}
+.crumb:hover {
+    text-decoration: underline;
+}
+.crumb-sep {
+    margin: 0 6px;
+    color: #9ca3af;
+    font-weight: normal;
+}
+.fileItem.selected {
+    background: #fde68a;
+    border-left: 4px solid #b45309;
+}
+.folder-item {
+    cursor: pointer;
+}
+.name-dialog-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.name-dialog-backdrop.open {
+    display: flex;
+}
+.name-dialog {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    min-width: 320px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+.name-dialog label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #374151;
+}
+.name-dialog input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+.name-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
 </style>
 
 </head>
 <body>
 
 <h1>📁 MDrive Cloud Workspace</h1>
+
+<div id="breadcrumb" class="breadcrumb"></div>
 
 <div class="upload-zone">
     <input type="file" id="fileInput" style="padding: 10px;">
@@ -85,86 +193,331 @@ button:hover{
 
 <div id="fileList"></div>
 
+<div id="nameDialogBackdrop" class="name-dialog-backdrop">
+    <div class="name-dialog">
+        <label id="nameDialogLabel" for="nameDialogInput">Enter name</label>
+        <input id="nameDialogInput" type="text">
+        <div class="name-dialog-actions">
+            <button type="button" onclick="cancelNameDialog()" style="background:#6b7280;">Cancel</button>
+            <button type="button" onclick="confirmNameDialog()" style="background:#b45309;">OK</button>
+        </div>
+    </div>
+</div>
+
 <script>
 
- console.log("SCRIPT START");
-alert("SCRIPT START");
+const UI_STATE_KEY = "mdriveUiState";
 
- window.onerror = function(msg, url, line, col, err) {
-    console.error("JS ERROR:", msg);
-    console.error("LINE:", line);
-    console.error("COLUMN:", col);
-};
+let currentPath = [];
+let selectedFolderPath = null;
+let selectedFilePath = null;
+let folderClickTimer = null;
+let fileClickTimer = null;
+let currentFolders = [];
+let currentFiles = [];
+const directoryCache = {};
 
-let files = JSON.parse(localStorage.getItem("mdriveFiles") || "[]");
-let folders = JSON.parse(localStorage.getItem("mdriveFolders") || "[]");
+function cacheKey(relativePath) {
+    return relativePath || "";
+}
 
-console.log("FILES =", files);
-console.log("FOLDERS =", folders);
+function setCachedDirectory(relativePath, data) {
+    directoryCache[cacheKey(relativePath)] = data;
+}
 
-async function createFolder() {
+function invalidateDirectory(relativePath) {
+    delete directoryCache[cacheKey(relativePath)];
+}
 
-    const folderName = "New Folder";
-    if (!folderName) return;
+function invalidateDirectoryTree(relativePath) {
+    const prefix = cacheKey(relativePath);
+    Object.keys(directoryCache).forEach((key) => {
+        if (key === prefix || key.startsWith(prefix + "/")) {
+            delete directoryCache[key];
+        }
+    });
+}
 
-    const result = await window.electronAPI.createFolder(folderName);
+async function fetchDirectory(relativePath, { force = false } = {}) {
+    const key = cacheKey(relativePath);
+
+    if (!force && directoryCache[key]) {
+        return { success: true, ...directoryCache[key] };
+    }
+
+    const result = await window.electronAPI.listDirectory(relativePath);
 
     if (result.success) {
-        folders.push(folderName);
-        localStorage.setItem("mdriveFolders", JSON.stringify(folders));
+        setCachedDirectory(relativePath, {
+            folders: result.folders || [],
+            files: result.files || []
+        });
+    }
+
+    return result;
+}
+
+let nameDialogResolver = null;
+
+function showNameDialog(label, defaultValue) {
+    console.log("[MDrive] showNameDialog:", label, defaultValue);
+
+    return new Promise((resolve) => {
+        nameDialogResolver = resolve;
+        document.getElementById("nameDialogLabel").textContent = label;
+        const input = document.getElementById("nameDialogInput");
+        input.value = defaultValue || "";
+        document.getElementById("nameDialogBackdrop").classList.add("open");
+        input.focus();
+        input.select();
+    });
+}
+
+function confirmNameDialog() {
+    const value = document.getElementById("nameDialogInput").value;
+    document.getElementById("nameDialogBackdrop").classList.remove("open");
+    if (nameDialogResolver) {
+        nameDialogResolver(value);
+        nameDialogResolver = null;
+    }
+}
+
+function cancelNameDialog() {
+    document.getElementById("nameDialogBackdrop").classList.remove("open");
+    if (nameDialogResolver) {
+        nameDialogResolver(null);
+        nameDialogResolver = null;
+    }
+}
+
+function loadUiState() {
+    const saved = JSON.parse(localStorage.getItem(UI_STATE_KEY) || "{}");
+    if (Array.isArray(saved.currentPath)) currentPath = saved.currentPath;
+    if (typeof saved.selectedFolderPath === "string") selectedFolderPath = saved.selectedFolderPath;
+}
+
+function saveUiState() {
+    localStorage.setItem(UI_STATE_KEY, JSON.stringify({
+        currentPath,
+        selectedFolderPath
+    }));
+}
+
+function getCurrentPathString() {
+    return currentPath.join("/");
+}
+
+function joinPath(parent, name) {
+    return parent ? parent + "/" + name : name;
+}
+
+function isValidName(name) {
+    return name && !/[\\/:*?"<>|]/.test(name);
+}
+
+function resolveNewFileName(oldName, userInput) {
+    const trimmed = userInput.trim();
+    const dotIndex = oldName.lastIndexOf(".");
+
+    if (dotIndex <= 0) return trimmed;
+    if (trimmed.includes(".")) return trimmed;
+
+    return trimmed + oldName.slice(dotIndex);
+}
+
+function applyRenamedFolderToNavigation(oldRelativePath, newRelativePath) {
+    const current = getCurrentPathString();
+
+    if (current === oldRelativePath) {
+        currentPath = newRelativePath ? newRelativePath.split("/") : [];
+    } else if (current.startsWith(oldRelativePath + "/")) {
+        const suffix = current.slice(oldRelativePath.length);
+        const updated = newRelativePath + suffix;
+        currentPath = updated.split("/").filter(Boolean);
+    }
+
+    if (selectedFolderPath === oldRelativePath) {
+        selectedFolderPath = newRelativePath;
+    } else if (selectedFolderPath && selectedFolderPath.startsWith(oldRelativePath + "/")) {
+        selectedFolderPath = newRelativePath + selectedFolderPath.slice(oldRelativePath.length);
+    }
+
+    saveUiState();
+}
+
+async function refreshCurrentView({ force = false } = {}) {
+    if (!window.electronAPI) return;
+
+    const pathStr = getCurrentPathString();
+    const result = await fetchDirectory(pathStr, { force });
+
+    if (result.success) {
+        currentFolders = result.folders || [];
+        currentFiles = result.files || [];
+    } else {
+        currentFolders = [];
+        currentFiles = [];
+        invalidateDirectory(pathStr);
+        alert("Failed to read folder: " + (result.error || "Unknown error"));
+    }
+
+    showFiles();
+}
+
+function navigateToPath(pathArray) {
+    if (folderClickTimer) {
+        clearTimeout(folderClickTimer);
+        folderClickTimer = null;
+    }
+    if (fileClickTimer) {
+        clearTimeout(fileClickTimer);
+        fileClickTimer = null;
+    }
+    currentPath = pathArray.slice();
+    selectedFolderPath = null;
+    selectedFilePath = null;
+    saveUiState();
+    refreshCurrentView({ force: false });
+}
+
+function handleFolderClick(fullPath) {
+    if (folderClickTimer) clearTimeout(folderClickTimer);
+    folderClickTimer = setTimeout(() => {
+        selectedFolderPath = fullPath;
+        saveUiState();
         showFiles();
+        folderClickTimer = null;
+    }, 200);
+}
+
+function handleFolderDoubleClick(fullPath) {
+    if (folderClickTimer) {
+        clearTimeout(folderClickTimer);
+        folderClickTimer = null;
+    }
+    navigateToPath(fullPath.split("/").filter(Boolean));
+}
+
+function openFolder(fullPath) {
+    handleFolderDoubleClick(fullPath);
+}
+
+function handleFileClick(filePath) {
+    if (fileClickTimer) clearTimeout(fileClickTimer);
+    fileClickTimer = setTimeout(() => {
+        selectedFilePath = filePath;
+        showFiles();
+        fileClickTimer = null;
+    }, 200);
+}
+
+function handleFileDoubleClick(filePath) {
+    if (fileClickTimer) {
+        clearTimeout(fileClickTimer);
+        fileClickTimer = null;
+    }
+    openFile(filePath);
+}
+
+async function openFile(filePath) {
+    const result = await window.electronAPI.openFile(filePath);
+
+    if (!result.success) {
+        alert(result.error || "Could not open file.");
+    }
+}
+
+async function downloadFile(filePath) {
+    const result = await window.electronAPI.downloadFile(filePath);
+
+    if (result.canceled) return;
+
+    if (result.success) {
+        alert("File saved to:\n" + result.path);
+    } else {
+        alert(result.error || "Download failed.");
+    }
+}
+
+function updateBreadcrumb() {
+    const el = document.getElementById("breadcrumb");
+    el.innerHTML = "";
+
+    const root = document.createElement("span");
+    root.className = "crumb";
+    root.textContent = "MDrive";
+    root.onclick = () => navigateToPath([]);
+    el.appendChild(root);
+
+    let accumulated = [];
+    currentPath.forEach((segment) => {
+        const sep = document.createElement("span");
+        sep.className = "crumb-sep";
+        sep.textContent = ">";
+        el.appendChild(sep);
+
+        accumulated.push(segment);
+        const pathCopy = accumulated.slice();
+        const crumb = document.createElement("span");
+        crumb.className = "crumb";
+        crumb.textContent = segment;
+        crumb.onclick = () => navigateToPath(pathCopy);
+        el.appendChild(crumb);
+    });
+}
+
+async function createFolder() {
+    const parentPath = getCurrentPathString();
+    let folderName = await showNameDialog("Enter folder name:", "New Folder");
+
+    if (folderName === null) return;
+
+    folderName = folderName.trim();
+    if (!folderName) {
+        alert("Folder name cannot be empty.");
+        return;
+    }
+
+    if (!isValidName(folderName)) {
+        alert('Folder name cannot contain \\ / : * ? " < > |');
+        return;
+    }
+
+    if (currentFolders.includes(folderName)) {
+        alert("A folder with this name already exists in this location.");
+        return;
+    }
+
+    const result = await window.electronAPI.createFolder(folderName, parentPath);
+
+    if (result.success) {
+        invalidateDirectory(parentPath);
+        await refreshCurrentView({ force: true });
         alert(result.message);
     } else {
         alert(result.message);
     }
 }
 
-async function saveFile(){
-
+async function saveFile() {
     let input = document.getElementById("fileInput");
 
-    alert("saveFile() called");
-    console.log("saveFile() called");
-
-    if(input.files.length === 0){
-    
+    if (input.files.length === 0) {
         alert("Please select a file first!");
         return;
     }
 
     let file = input.files[0];
 
-
-console.log("FILES:", input.files);
-console.log("FILE:", file);
-
-console.log("FILE PATH:", file.path);
-
-if (!file.path) {
-    alert("File path not available.");
-    return;
-}
-
     if (window.electronAPI) {
         try {
-            let result = await window.electronAPI.saveFile(file.path, currentFolder);
-            
-            if(result && result.success) {
-                // ডুপ্লিকেট এন্ট্রি আটকানোর জন্য চেক (যদি একই নামের ফাইল আগে থেকেই পুশ করা থাকে)
-                let isDuplicate = files.some(f => f.name === result.fileName && f.path === result.path);
-                
-                if(!isDuplicate) {
-                    files.push({
-    name: result.fileName,
-    path: result.path,
-    folder: currentFolder || ""
-});
-                    localStorage.setItem("mdriveFiles", JSON.stringify(files));
-                    showFiles();
-                    alert("File Saved inside mdrive folder successfully!");
-                } else {
-                    alert("This file is already uploaded to your workspace!");
-                }
+            let result = await window.electronAPI.saveFile(file, getCurrentPathString());
+
+            if (result && result.success) {
+                input.value = "";
+                invalidateDirectory(getCurrentPathString());
+                await refreshCurrentView({ force: true });
+                alert("File saved successfully!");
             } else {
                 alert("Error saving file: " + (result.error || "Unknown Error"));
             }
@@ -176,71 +529,171 @@ if (!file.path) {
     }
 }
 
-function removeFolder(index) {
-    if(confirm("Are you sure you want to remove this folder?")) {
-        folders.splice(index, 1);
-        localStorage.setItem("mdriveFolders", JSON.stringify(folders));
-        showFiles();
+async function renameFolder(folderRelativePath) {
+    console.log("[MDrive] renameFolder click:", folderRelativePath);
+
+    const oldName = folderRelativePath.split("/").pop();
+    let newName = await showNameDialog("Rename folder:", oldName);
+
+    console.log("[MDrive] renameFolder dialog result:", newName);
+
+    if (newName === null) return;
+
+    newName = newName.trim();
+    if (!newName) {
+        alert("Folder name cannot be empty.");
+        return;
+    }
+
+    if (newName === oldName) return;
+
+    if (!isValidName(newName)) {
+        alert('Folder name cannot contain \\ / : * ? " < > |');
+        return;
+    }
+
+    if (currentFolders.includes(newName)) {
+        alert("A folder with this name already exists in this location.");
+        return;
+    }
+
+    const result = await window.electronAPI.renameFolder(folderRelativePath, newName);
+
+    console.log("[MDrive] renameFolder IPC result:", result);
+
+    if (result.success) {
+        const parentPath = folderRelativePath.split("/").slice(0, -1).join("/");
+        invalidateDirectoryTree(folderRelativePath);
+        invalidateDirectory(parentPath);
+        applyRenamedFolderToNavigation(folderRelativePath, result.newRelativePath);
+        await refreshCurrentView({ force: true });
+    } else {
+        alert(result.error || "Rename failed.");
     }
 }
 
-function removeFile(index) {
-    if(confirm("Are you sure you want to remove this file?")) {
-        files.splice(index, 1);
-        localStorage.setItem("mdriveFiles", JSON.stringify(files));
-        showFiles();
+async function renameFile(filePath, oldName) {
+    console.log("[MDrive] renameFile click:", filePath, oldName);
+
+    let userInput = await showNameDialog("Rename file:", oldName);
+
+    console.log("[MDrive] renameFile dialog result:", userInput);
+
+    if (userInput === null) return;
+
+    userInput = userInput.trim();
+    if (!userInput) {
+        alert("File name cannot be empty.");
+        return;
+    }
+
+    const newName = resolveNewFileName(oldName, userInput);
+    if (newName === oldName) return;
+
+    if (!isValidName(newName)) {
+        alert('File name cannot contain \\ / : * ? " < > |');
+        return;
+    }
+
+    if (currentFiles.some(f => f.name === newName && f.path !== filePath)) {
+        alert("A file with this name already exists in this location.");
+        return;
+    }
+
+    const result = await window.electronAPI.renameFile(filePath, newName);
+
+    console.log("[MDrive] renameFile IPC result:", result);
+
+    if (result.success) {
+        invalidateDirectory(getCurrentPathString());
+        await refreshCurrentView({ force: true });
+    } else {
+        alert(result.error || "Rename failed.");
     }
 }
 
-function showFiles(){
+async function removeFolder(folderRelativePath) {
+    if (!confirm("Are you sure you want to remove this folder?")) return;
+
+    const result = await window.electronAPI.deleteFolder(folderRelativePath);
+
+    if (result.success) {
+        if (selectedFolderPath === folderRelativePath) selectedFolderPath = null;
+        invalidateDirectory(getCurrentPathString());
+        saveUiState();
+        await refreshCurrentView({ force: true });
+    } else {
+        alert(result.error || "Delete failed.");
+    }
+}
+
+async function removeFile(filePath) {
+    if (!confirm("Are you sure you want to remove this file?")) return;
+
+    const result = await window.electronAPI.deleteFile(filePath);
+
+    if (result.success) {
+        invalidateDirectory(getCurrentPathString());
+        await refreshCurrentView({ force: true });
+    } else {
+        alert(result.error || "Delete failed.");
+    }
+}
+
+function showFiles() {
+    const scrollY = window.scrollY;
+    updateBreadcrumb();
     let html = "";
+    const currentPathStr = getCurrentPathString();
 
-    // ফোল্ডার ফিল্টারিং ও রেন্ডারিং
-    console.log("Folders =", folders);
-    folders.forEach((folder, index) => {
-        
-        if(folder && folder !== "undefined") {
-            html += `
-        <div class="fileItem" onclick="openFolder('${folder}')">
-                📁 <b>${folder}</b>
-                <button class="btn-delete" onclick="event.stopPropagation(); removeFolder(${index})">Delete</button>
+    currentFolders.forEach((name) => {
+        const fullPath = joinPath(currentPathStr, name);
+        const selected = selectedFolderPath === fullPath ? " selected" : "";
+        const safePath = fullPath.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        html += `
+            <div class="fileItem folder-item${selected}"
+                 onclick="handleFolderClick('${safePath}')"
+                 ondblclick="handleFolderDoubleClick('${safePath}')">
+                📁 <b>${name}</b>
+                <div class="item-actions">
+                    <button class="btn-open" onclick="event.stopPropagation(); openFolder('${safePath}')">Open</button>
+                    <button class="btn-rename" onclick="event.stopPropagation(); renameFolder('${safePath}')">Rename</button>
+                    <button class="btn-delete" onclick="event.stopPropagation(); removeFolder('${safePath}')">Delete</button>
+                </div>
             </div>
-            `;
-        }
+        `;
     });
 
-    // ফাইল ফিল্টারিং (undefined এবং নাল অবজেক্ট প্রোটেকশনসহ)
-   const visibleFiles = files.filter(f => (f.folder || "") === currentFolder);
-    console.log("Visible Files =", visibleFiles);
-
-visibleFiles.forEach((file, index) => {
-        if (file && file.name && file.path && file.name !== "undefined" && file.name !== "null") {
-            let safePath = file.path.replace(/\\/g, "/");
+    currentFiles.forEach((file) => {
+        if (file && file.name && file.path) {
+            const safePath = file.path.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+            const safeName = file.name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+            const selected = selectedFilePath === file.path ? " selected" : "";
             html += `
-            <div class="fileItem" onclick="window.open('file:///${safePath}')">
+            <div class="fileItem${selected}"
+                 onclick="handleFileClick('${safePath}')"
+                 ondblclick="handleFileDoubleClick('${safePath}')">
                 <span>📄 ${file.name}</span>
-                <button class="btn-delete" onclick="event.stopPropagation(); removeFile(${index})">Delete</button>
+                <div class="item-actions">
+                    <button class="btn-open" onclick="event.stopPropagation(); openFile('${safePath}')">Open</button>
+                    <button class="btn-download" onclick="event.stopPropagation(); downloadFile('${safePath}')">Download</button>
+                    <button class="btn-rename" onclick="event.stopPropagation(); renameFile('${safePath}', '${safeName}')">Rename</button>
+                    <button class="btn-delete" onclick="event.stopPropagation(); removeFile('${safePath}')">Delete</button>
+                </div>
             </div>
             `;
         }
     });
 
-    document.getElementById("fileList").innerHTML = html ? html : "<p style='color:gray; padding-left:10px;'>Your drive storage is empty.</p>";
+    document.getElementById("fileList").innerHTML = html
+        ? html
+        : "<p style='color:gray; padding-left:10px;'>Your drive storage is empty.</p>";
+
+    window.scrollTo(0, scrollY);
 }
 
-// ইনিশিয়াল কল
-let currentFolder = "";
-
-window.openFolder = function(folderName) {
-    currentFolder = folderName;
-
-    console.log("Current Folder =", currentFolder);
-    console.log(files);
-
-    showFiles();
-}
-
-showFiles();
+loadUiState();
+refreshCurrentView({ force: true });
 </script>
 
 </body>
