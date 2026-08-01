@@ -33,6 +33,7 @@
       <button id="bookmarkStarBtn" class="bookmark-star" onclick="Bookmarks.toggleOrEditCurrent()" title="Bookmark this page" aria-label="Bookmark this page">☆</button>
       <button id="bookmarkManagerBtn" onclick="Bookmarks.openManager()" title="Bookmark Manager" aria-label="Bookmark Manager">📑</button>
       <button id="historyManagerBtn" onclick="History.openManager()" title="History" aria-label="History">🕐</button>
+      <button id="settingsBtn" onclick="Settings.openManager()" title="Settings" aria-label="Settings">⚙</button>
     <button id="appsBtn" onclick="toggleApps()">⋮</button>
       <button onclick="loadSite()">Go</button>
     </div>
@@ -138,7 +139,31 @@
   </div>
 </div>
 
+<!-- Settings Manager -->
+<div id="settingsManager" class="settings-manager" role="dialog" aria-modal="true" aria-labelledby="settingsManagerTitle">
+  <div class="settings-manager-panel">
+    <div class="settings-manager-header">
+      <h2 id="settingsManagerTitle">Settings</h2>
+      <button type="button" class="bm-icon-btn" onclick="Settings.closeManager()" title="Close">✕</button>
+    </div>
+    <div class="settings-manager-toolbar">
+      <input id="settingsSearchInput" type="search" placeholder="Search settings" oninput="Settings.onSearchInput(this.value)">
+      <span class="settings-autosave-hint">Changes save automatically</span>
+    </div>
+    <div class="settings-manager-body">
+      <aside class="settings-manager-sidebar">
+        <div id="settingsNav" class="settings-nav"></div>
+      </aside>
+      <section class="settings-manager-main">
+        <h3 id="settingsSectionTitle">General</h3>
+        <div id="settingsContent" class="settings-content"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
  <script src="apps/browser/BrowserTab.js"></script>
+ <script src="apps/browser/Settings.js"></script>
  <script src="apps/browser/Bookmarks.js"></script>
  <script src="apps/browser/History.js"></script>
  <script src="apps/browser/browser.js"></script>

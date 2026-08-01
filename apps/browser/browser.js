@@ -78,7 +78,11 @@ function loadSite(){
     if(url === "") return;
     if(!url.startsWith("http://") && !url.startsWith("https://")){
         if(url.includes(".")){ url = "https://" + url; }
-        else { url = "https://www.google.com/search?q=" + encodeURIComponent(url); }
+        else {
+            url = window.Settings
+                ? Settings.buildSearchUrl(url)
+                : ("https://www.google.com/search?q=" + encodeURIComponent(url));
+        }
     }
     document.getElementById("home").style.display = "none";
     browser.style.display = "flex";
@@ -132,6 +136,14 @@ browser.addEventListener("page-title-updated", (e) => {
 });
 
 function newTab(){
+    if (window.Settings) {
+        const behavior = Settings.handleNewTab();
+        if (behavior === "homepage" || behavior === "blank") {
+            if (window.Bookmarks) Bookmarks.onPageChanged();
+            return;
+        }
+    }
+
     browser.src = "";
     browser.style.display = "none";
     document.getElementById("url").value = "";
@@ -156,9 +168,12 @@ function toggleApps() {
     }
 }
 
-window.onload = function(){
+window.onload = async function(){
     document.getElementById("appsMenu").style.display = "none";
     setTimeout(() => { document.getElementById("url").focus(); }, 300);
+    if (window.Settings) {
+        await Settings.init();
+    }
     if (window.Bookmarks) {
         Bookmarks.init();
     }

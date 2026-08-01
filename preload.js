@@ -75,6 +75,24 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke("history:delete", payload),
 
     historyDeleteRange: (range) =>
-      ipcRenderer.invoke("history:delete-range", range)
+      ipcRenderer.invoke("history:delete-range", range),
+
+    settingsGet: () =>
+      ipcRenderer.invoke("settings:get"),
+
+    settingsSet: (patch) =>
+      ipcRenderer.invoke("settings:set", patch),
+
+    settingsReset: () =>
+      ipcRenderer.invoke("settings:reset"),
+
+    settingsPickDownloadFolder: () =>
+      ipcRenderer.invoke("settings:pick-download-folder"),
+
+    settingsGetAbout: () =>
+      ipcRenderer.invoke("settings:get-about"),
+
+    settingsClearPrivacy: (target) =>
+      ipcRenderer.invoke("settings:clear-privacy", target)
   }
 );

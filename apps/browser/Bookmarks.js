@@ -144,6 +144,17 @@ const Bookmarks = (function () {
     const barBookmarks = getBookmarksInFolder(BOOKMARKS_BAR_ID);
     const barFolders = getChildFolders(BOOKMARKS_BAR_ID);
 
+    const showBar = window.Settings
+      ? Settings.shouldShowBookmarksBar()
+      : true;
+
+    if (!showBar) {
+      bar.style.display = "none";
+      document.body.classList.remove("has-bookmarks-bar");
+      itemsEl.innerHTML = "";
+      return;
+    }
+
     bar.style.display = "flex";
     itemsEl.innerHTML = "";
 
@@ -699,7 +710,8 @@ const Bookmarks = (function () {
     onPageChanged,
     saveBookmarkForm,
     closeBookmarkFormDialog,
-    deleteBookmarkFromForm
+    deleteBookmarkFromForm,
+    refreshBar: renderBookmarksBar
   };
 })();
 

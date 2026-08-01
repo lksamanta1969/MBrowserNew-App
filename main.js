@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
-const { spawn } = require("child_process");
+const { app, BrowserWindow, ipcMain, shell, dialog, session } = require("electron");
+const { spawn, execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -789,7 +790,18 @@ ipcMain.handle("bookmarks:import-html", async () => {
 
 /* ===================== History ===================== */
 
-const HISTORY_MAX_ENTRIES = 10000;
+const HISTORY_MAX_ENTRIES_DEFAULT = 10000;
+
+function getHistoryMaxEntries() {
+    try {
+        const settings = readSettingsStore();
+        const max = Number(settings && settings.history && settings.history.maxEntries);
+        if (Number.isFinite(max) && max > 0) return Math.floor(max);
+    } catch (e) {
+        /* settings may not be ready */
+    }
+    return HISTORY_MAX_ENTRIES_DEFAULT;
+}
 
 function historyFilePath() {
     return path.join(app.getPath("userData"), "history.json");
@@ -841,9 +853,9 @@ function writeHistoryStore(data) {
         fs.mkdirSync(dir, { recursive: true });
     }
 
-    if (Array.isArray(data.entries) && data.entries.length > HISTORY_MAX_ENTRIES) {
+    if (Array.isArray(data.entries) && data.entries.length > getHistoryMaxEntries()) {
         data.entries.sort((a, b) => (b.lastVisited || 0) - (a.lastVisited || 0));
-        data.entries = data.entries.slice(0, HISTORY_MAX_ENTRIES);
+        data.entries = data.entries.slice(0, getHistoryMaxEntries());
     }
 
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
@@ -1025,6 +1037,240 @@ ipcMain.handle("history:delete-range", async (event, range) => {
             data,
             deletedCount: before - data.entries.length
         };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+/* ===================== Settings ===================== */
+
+function settingsFilePath() {
+    return path.join(app.getPath("userData"), "settings.json");
+}
+
+function defaultSettingsData() {
+    return {
+        version: 1,
+        general: {
+            browserName: "MBrowser",
+            homepage: "mbrowser://home",
+            newTabBehavior: "home",
+            defaultZoom: 100
+        },
+        appearance: {
+            theme: "system",
+            accentColor: "#b45309",
+            compactMode: false,
+            showBookmarksBar: true,
+            showStatusBar: false
+        },
+        startup: {
+            mode: "newTab",
+            restorePreviousSession: false
+        },
+        searchEngine: {
+            provider: "google",
+            customSearchUrl: "https://example.com/search?q=%s"
+        },
+        downloads: {
+            defaultFolder: "",
+            askBeforeDownload: true,
+            autoOpenDownloads: false,
+            showNotifications: true
+        },
+        privacy: {
+            doNotTrack: false,
+            safeBrowsing: false
+        },
+        bookmarks: {
+            showBookmarksBar: true
+        },
+        history: {
+            retentionDays: 90,
+            maxEntries: 10000,
+            autoCleanup: false
+        },
+        mdrive: {
+            defaultWorkspace: "mdrive",
+            autoOpen: false,
+            recentFolder: "",
+            syncEnabled: false
+        },
+        advanced: {
+            hardwareAcceleration: true,
+            experimentalFeatures: false,
+            verboseLogging: false
+        }
+    };
+}
+
+function deepMergeSettings(target, source) {
+    const output = { ...(target || {}) };
+    Object.keys(source || {}).forEach((key) => {
+        const value = source[key];
+        if (value && typeof value === "object" && !Array.isArray(value)) {
+            output[key] = deepMergeSettings(target ? target[key] : {}, value);
+        } else {
+            output[key] = value;
+        }
+    });
+    return output;
+}
+
+function readSettingsStore() {
+    const filePath = settingsFilePath();
+    const defaults = defaultSettingsData();
+
+    if (!fs.existsSync(filePath)) {
+        fs.writeFileSync(filePath, JSON.stringify(defaults, null, 2), "utf8");
+        return defaults;
+    }
+
+    try {
+        const raw = fs.readFileSync(filePath, "utf8");
+        const data = JSON.parse(raw || "{}");
+        return deepMergeSettings(defaults, data);
+    } catch (error) {
+        console.error("[SETTINGS] Failed to read store:", error);
+        return defaults;
+    }
+}
+
+function writeSettingsStore(data) {
+    const filePath = settingsFilePath();
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    if (data.appearance && data.bookmarks) {
+        if (data.appearance.showBookmarksBar !== undefined) {
+            data.bookmarks.showBookmarksBar = !!data.appearance.showBookmarksBar;
+        } else if (data.bookmarks.showBookmarksBar !== undefined) {
+            data.appearance.showBookmarksBar = !!data.bookmarks.showBookmarksBar;
+        }
+    }
+
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+}
+
+function getStableCommit() {
+    try {
+        return execSync("git rev-parse --short HEAD", {
+            cwd: __dirname,
+            encoding: "utf8"
+        }).trim();
+    } catch (e) {
+        return "9d8da19";
+    }
+}
+
+ipcMain.handle("settings:get", async () => {
+    try {
+        return { success: true, data: readSettingsStore() };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("settings:set", async (event, patch) => {
+    try {
+        const current = readSettingsStore();
+        const next = deepMergeSettings(current, patch || {});
+        writeSettingsStore(next);
+        return { success: true, data: next };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("settings:reset", async () => {
+    try {
+        const data = defaultSettingsData();
+        writeSettingsStore(data);
+        return { success: true, data };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("settings:pick-download-folder", async () => {
+    try {
+        const win = BrowserWindow.getFocusedWindow();
+        const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+            title: "Choose download folder",
+            properties: ["openDirectory", "createDirectory"]
+        });
+
+        if (canceled || !filePaths || !filePaths.length) {
+            return { success: false, canceled: true };
+        }
+
+        const current = readSettingsStore();
+        current.downloads = current.downloads || {};
+        current.downloads.defaultFolder = filePaths[0];
+        writeSettingsStore(current);
+
+        return { success: true, data: current, path: filePaths[0] };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("settings:get-about", async () => {
+    try {
+        return {
+            success: true,
+            data: {
+                mbrowserVersion: (() => {
+                    try {
+                        return require(path.join(__dirname, "package.json")).version;
+                    } catch (e) {
+                        return app.getVersion();
+                    }
+                })(),
+                stableCommit: getStableCommit(),
+                electron: process.versions.electron,
+                chrome: process.versions.chrome,
+                node: process.versions.node,
+                platform: process.platform,
+                arch: process.arch,
+                osRelease: os.release(),
+                osType: os.type()
+            }
+        };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("settings:clear-privacy", async (event, target) => {
+    try {
+        const type = String(target || "");
+        const results = {};
+
+        if (type === "history" || type === "all") {
+            const history = readHistoryStore();
+            history.entries = [];
+            writeHistoryStore(history);
+            results.history = true;
+        }
+
+        if (type === "cache" || type === "all") {
+            await session.defaultSession.clearCache();
+            results.cache = true;
+        }
+
+        if (type === "cookies" || type === "all") {
+            await session.defaultSession.clearStorageData({
+                storages: ["cookies", "localstorage", "indexdb", "shadercache", "websql", "serviceworkers"]
+            });
+            results.cookies = true;
+        }
+
+        if (type === "downloads" || type === "all") {
+            results.downloads = true;
+        }
+
+        return { success: true, results };
     } catch (error) {
         return { success: false, error: error.message };
     }
