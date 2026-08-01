@@ -1,19 +1,32 @@
 
 const browser = document.getElementById("browser");
 let onHomePage = true;
+let lastPageBeforeHome = "";
 
 function goBack() {
     if (onHomePage) return;
 
-    if (browser.canGoBack()) {
+    let canBack = false;
+    try {
+        canBack = !!(browser && browser.canGoBack && browser.canGoBack());
+    } catch (e) {
+        canBack = false;
+    }
+
+    if (canBack) {
         browser.goBack();
     } else {
-        lastPageBeforeHome = browser.getURL();
+        try {
+            lastPageBeforeHome = browser.getURL();
+        } catch (e) {
+            lastPageBeforeHome = document.getElementById("url").value || lastPageBeforeHome;
+        }
 
         browser.style.display = "none";
         document.getElementById("home").style.display = "block";
         document.getElementById("url").value = "";
         onHomePage = true;
+        if (window.Bookmarks) Bookmarks.onPageChanged();
     }
 }
 
@@ -24,11 +37,25 @@ function goForward() {
         browser.style.display = "flex";
         browser.src = lastPageBeforeHome;
         onHomePage = false;
+        if (window.Bookmarks) Bookmarks.onPageChanged();
         return;
     }
 
-    if (!onHomePage && browser.canGoForward()) {
-        browser.goForward();
+    try {
+        if (!onHomePage && browser.canGoForward()) {
+            browser.goForward();
+        }
+    } catch (e) {
+        /* webview may not be ready */
+    }
+}
+
+function refreshPage() {
+    if (onHomePage) return;
+    try {
+        if (browser && browser.reload) browser.reload();
+    } catch (e) {
+        console.warn("refreshPage failed:", e);
     }
 }
 
@@ -43,6 +70,7 @@ function openApp(appName) {
     browser.src = appUrl;
 
     console.log("OPENING:", appUrl);
+    if (window.Bookmarks) Bookmarks.onPageChanged();
 }
 
 function loadSite(){
@@ -56,10 +84,23 @@ function loadSite(){
     browser.style.display = "flex";
     browser.src = url;
     onHomePage = false;
+    if (window.Bookmarks) Bookmarks.onPageChanged();
 }
 
 browser.addEventListener("did-navigate", (e) => {
     document.getElementById("url").value = e.url;
+    if (window.Bookmarks) Bookmarks.onPageChanged();
+});
+
+browser.addEventListener("did-navigate-in-page", (e) => {
+    if (e && e.url) {
+        document.getElementById("url").value = e.url;
+        if (window.Bookmarks) Bookmarks.onPageChanged();
+    }
+});
+
+browser.addEventListener("page-title-updated", () => {
+    if (window.Bookmarks) Bookmarks.onPageChanged();
 });
 
 function newTab(){
@@ -69,6 +110,7 @@ function newTab(){
     document.getElementById("home").style.display = "block";
     document.getElementById("homesearch").value = "";
     onHomePage = true;
+    if (window.Bookmarks) Bookmarks.onPageChanged();
 }
 
 function homeSearch(){
@@ -89,6 +131,9 @@ function toggleApps() {
 window.onload = function(){
     document.getElementById("appsMenu").style.display = "none";
     setTimeout(() => { document.getElementById("url").focus(); }, 300);
+    if (window.Bookmarks) {
+        Bookmarks.init();
+    }
 }
 document.addEventListener("DOMContentLoaded", () => {
     if (window.BrowserTab) {

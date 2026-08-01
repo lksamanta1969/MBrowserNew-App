@@ -33,6 +33,33 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke("mdrive:open-file", filePath),
 
     downloadFile: (sourcePath) =>
-      ipcRenderer.invoke("mdrive:download-file", sourcePath)
+      ipcRenderer.invoke("mdrive:download-file", sourcePath),
+
+    bookmarksGet: () =>
+      ipcRenderer.invoke("bookmarks:get"),
+
+    bookmarksAdd: (payload) =>
+      ipcRenderer.invoke("bookmarks:add", payload),
+
+    bookmarksUpdate: (payload) =>
+      ipcRenderer.invoke("bookmarks:update", payload),
+
+    bookmarksDelete: (id) =>
+      ipcRenderer.invoke("bookmarks:delete", id),
+
+    bookmarksAddFolder: (payload) =>
+      ipcRenderer.invoke("bookmarks:add-folder", payload),
+
+    bookmarksUpdateFolder: (payload) =>
+      ipcRenderer.invoke("bookmarks:update-folder", payload),
+
+    bookmarksDeleteFolder: (id) =>
+      ipcRenderer.invoke("bookmarks:delete-folder", id),
+
+    bookmarksImportHtml: () =>
+      ipcRenderer.invoke("bookmarks:import-html"),
+
+    bookmarksExportHtml: () =>
+      ipcRenderer.invoke("bookmarks:export-html")
   }
 );

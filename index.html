@@ -7,6 +7,7 @@
 </head>
 <body>
 
+
   <div class="apps-menu" id="appsMenu">
     <div class="app" onclick="openApp('mmail')">📧 MMail</div>
     <div class="app" onclick="openApp('mnote')">📝 MNote</div>
@@ -29,8 +30,14 @@
       
       <input id="url" placeholder="Search Google or Enter URL" onkeypress="if(event.key==='Enter'){loadSite()}">
       
+      <button id="bookmarkStarBtn" class="bookmark-star" onclick="Bookmarks.toggleOrEditCurrent()" title="Bookmark this page" aria-label="Bookmark this page">☆</button>
+      <button id="bookmarkManagerBtn" onclick="Bookmarks.openManager()" title="Bookmark Manager" aria-label="Bookmark Manager">📑</button>
     <button id="appsBtn" onclick="toggleApps()">⋮</button>
       <button onclick="loadSite()">Go</button>
+    </div>
+    <div id="bookmarksBar" class="bookmarks-bar" aria-label="Bookmarks bar">
+      <div id="bookmarksBarItems" class="bookmarks-bar-items"></div>
+      <button type="button" class="bm-bar-manage" onclick="Bookmarks.openManager()" title="Manage bookmarks">⋯</button>
     </div>
   </div>
 
@@ -48,7 +55,54 @@
     preload="file:///C:/Users/L.K. SAMANTA/Desktop/MBrowser/preload.js">
 </webview>
 
+<!-- Bookmark Manager -->
+<div id="bookmarkManager" class="bm-manager" role="dialog" aria-modal="true" aria-labelledby="bmManagerTitle">
+  <div class="bm-manager-panel">
+    <div class="bm-manager-header">
+      <h2 id="bmManagerTitle">Bookmark Manager</h2>
+      <button type="button" class="bm-icon-btn" onclick="Bookmarks.closeManager()" title="Close">✕</button>
+    </div>
+    <div class="bm-manager-toolbar">
+      <input id="bmSearchInput" type="search" placeholder="Search bookmarks" oninput="Bookmarks.onSearchInput(this.value)">
+      <button type="button" onclick="Bookmarks.createFolder()">New folder</button>
+      <button type="button" id="bmRenameFolderBtn" onclick="Bookmarks.renameSelectedFolder()">Rename folder</button>
+      <button type="button" id="bmDeleteFolderBtn" class="danger" onclick="Bookmarks.deleteSelectedFolder()">Delete folder</button>
+      <button type="button" onclick="Bookmarks.importHtml()">Import</button>
+      <button type="button" onclick="Bookmarks.exportHtml()">Export</button>
+    </div>
+    <div class="bm-manager-body">
+      <aside class="bm-manager-sidebar">
+        <div id="bmFolderTree" class="bm-folder-tree"></div>
+      </aside>
+      <section class="bm-manager-main">
+        <h3 id="bmListHeading">Bookmarks bar</h3>
+        <div id="bmList" class="bm-list"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit bookmark dialog -->
+<div id="bmFormBackdrop" class="bm-dialog-backdrop">
+  <div class="bm-dialog" role="dialog" aria-modal="true">
+    <h3 id="bmFormTitle">Add bookmark</h3>
+    <label for="bmFormName">Name</label>
+    <input id="bmFormName" type="text" autocomplete="off">
+    <label for="bmFormUrl">URL</label>
+    <input id="bmFormUrl" type="text" autocomplete="off">
+    <label for="bmFormFolder">Folder</label>
+    <select id="bmFormFolder"></select>
+    <div class="bm-dialog-actions">
+      <button type="button" id="bmFormDeleteBtn" class="danger" onclick="Bookmarks.deleteBookmarkFromForm()">Delete</button>
+      <div class="bm-dialog-spacer"></div>
+      <button type="button" onclick="Bookmarks.closeBookmarkFormDialog()">Cancel</button>
+      <button type="button" class="primary" onclick="Bookmarks.saveBookmarkForm()">Done</button>
+    </div>
+  </div>
+</div>
+
  <script src="apps/browser/BrowserTab.js"></script>
+ <script src="apps/browser/Bookmarks.js"></script>
  <script src="apps/browser/browser.js"></script>
 
 <script type="module">

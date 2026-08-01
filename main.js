@@ -271,3 +271,518 @@ ipcMain.handle("mdrive:download-file", async (event, sourcePath) => {
         return { success: false, error: error.message };
     }
 });
+
+/* ===================== Bookmarks ===================== */
+
+const BOOKMARKS_BAR_ID = "bookmarks_bar";
+const OTHER_BOOKMARKS_ID = "other";
+
+function bookmarksFilePath() {
+    return path.join(app.getPath("userData"), "bookmarks.json");
+}
+
+function createBookmarkId(prefix) {
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function defaultBookmarksData() {
+    return {
+        version: 1,
+        folders: [
+            {
+                id: BOOKMARKS_BAR_ID,
+                name: "Bookmarks bar",
+                parentId: null,
+                order: 0,
+                isSystem: true
+            },
+            {
+                id: OTHER_BOOKMARKS_ID,
+                name: "Other bookmarks",
+                parentId: null,
+                order: 1,
+                isSystem: true
+            }
+        ],
+        bookmarks: []
+    };
+}
+
+function readBookmarksStore() {
+    const filePath = bookmarksFilePath();
+
+    if (!fs.existsSync(filePath)) {
+        const data = defaultBookmarksData();
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+        return data;
+    }
+
+    try {
+        const raw = fs.readFileSync(filePath, "utf8");
+        const data = JSON.parse(raw || "{}");
+
+        if (!Array.isArray(data.folders) || !Array.isArray(data.bookmarks)) {
+            return defaultBookmarksData();
+        }
+
+        const hasBar = data.folders.some((f) => f.id === BOOKMARKS_BAR_ID);
+        const hasOther = data.folders.some((f) => f.id === OTHER_BOOKMARKS_ID);
+
+        if (!hasBar) {
+            data.folders.unshift({
+                id: BOOKMARKS_BAR_ID,
+                name: "Bookmarks bar",
+                parentId: null,
+                order: 0,
+                isSystem: true
+            });
+        }
+
+        if (!hasOther) {
+            data.folders.push({
+                id: OTHER_BOOKMARKS_ID,
+                name: "Other bookmarks",
+                parentId: null,
+                order: 1,
+                isSystem: true
+            });
+        }
+
+        return data;
+    } catch (error) {
+        console.error("[BOOKMARKS] Failed to read store:", error);
+        return defaultBookmarksData();
+    }
+}
+
+function writeBookmarksStore(data) {
+    const filePath = bookmarksFilePath();
+    const dir = path.dirname(filePath);
+
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+}
+
+function escapeHtml(text) {
+    return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function buildBookmarkHtml(data) {
+    const foldersByParent = {};
+    const bookmarksByFolder = {};
+
+    data.folders.forEach((folder) => {
+        const key = folder.parentId || "root";
+        if (!foldersByParent[key]) foldersByParent[key] = [];
+        foldersByParent[key].push(folder);
+    });
+
+    data.bookmarks.forEach((bookmark) => {
+        const key = bookmark.folderId || OTHER_BOOKMARKS_ID;
+        if (!bookmarksByFolder[key]) bookmarksByFolder[key] = [];
+        bookmarksByFolder[key].push(bookmark);
+    });
+
+    Object.keys(foldersByParent).forEach((key) => {
+        foldersByParent[key].sort((a, b) => (a.order || 0) - (b.order || 0));
+    });
+    Object.keys(bookmarksByFolder).forEach((key) => {
+        bookmarksByFolder[key].sort((a, b) => (a.order || 0) - (b.order || 0));
+    });
+
+    function renderFolder(folderId) {
+        let html = "";
+        const childFolders = foldersByParent[folderId] || [];
+        const items = bookmarksByFolder[folderId] || [];
+
+        childFolders.forEach((folder) => {
+            html += `    <DT><H3>${escapeHtml(folder.name)}</H3>\n`;
+            html += "    <DL><p>\n";
+            html += renderFolder(folder.id);
+            html += "    </DL><p>\n";
+        });
+
+        items.forEach((bookmark) => {
+            const added = bookmark.dateAdded
+                ? Math.floor(bookmark.dateAdded / 1000)
+                : Math.floor(Date.now() / 1000);
+            html += `    <DT><A HREF="${escapeHtml(bookmark.url)}" ADD_DATE="${added}">${escapeHtml(bookmark.title)}</A>\n`;
+        });
+
+        return html;
+    }
+
+    return [
+        "<!DOCTYPE NETSCAPE-Bookmark-file-1>",
+        "<!-- This is an automatically generated file.",
+        "     It will be read and overwritten.",
+        "     DO NOT EDIT! -->",
+        '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
+        "<TITLE>Bookmarks</TITLE>",
+        "<H1>Bookmarks</H1>",
+        "<DL><p>",
+        renderFolder("root"),
+        "</DL><p>",
+        ""
+    ].join("\n");
+}
+
+function parseBookmarkHtml(html) {
+    const folders = [];
+    const bookmarks = [];
+    const folderStack = [OTHER_BOOKMARKS_ID];
+    let pendingFolderName = null;
+    let orderCounters = { [OTHER_BOOKMARKS_ID]: 0, [BOOKMARKS_BAR_ID]: 0 };
+
+    function nextOrder(folderId) {
+        if (orderCounters[folderId] === undefined) orderCounters[folderId] = 0;
+        return orderCounters[folderId]++;
+    }
+
+    const tokenRegex = /<(DT|\/?DL|H3|A)\b([^>]*)>([^<]*)/gi;
+    let match;
+
+    while ((match = tokenRegex.exec(html)) !== null) {
+        const tag = match[1].toUpperCase();
+        const attrs = match[2] || "";
+        const text = (match[3] || "").trim();
+
+        if (tag === "H3") {
+            if (/PERSONAL_TOOLBAR_FOLDER\s*=\s*"true"/i.test(attrs)) {
+                pendingFolderName = "__BOOKMARKS_BAR__";
+            } else if (text) {
+                pendingFolderName = text
+                    .replace(/&amp;/g, "&")
+                    .replace(/&lt;/g, "<")
+                    .replace(/&gt;/g, ">")
+                    .replace(/&quot;/g, '"');
+            }
+        } else if (tag === "DL" && pendingFolderName) {
+            const parentId = folderStack[folderStack.length - 1];
+            let folderId;
+
+            if (
+                pendingFolderName === "__BOOKMARKS_BAR__" ||
+                /^bookmarks?\s*bar$/i.test(pendingFolderName) ||
+                /^favorites?\s*bar$/i.test(pendingFolderName)
+            ) {
+                folderId = BOOKMARKS_BAR_ID;
+            } else if (/^other\s*bookmarks?$/i.test(pendingFolderName)) {
+                folderId = OTHER_BOOKMARKS_ID;
+            } else {
+                folderId = createBookmarkId("folder");
+                folders.push({
+                    id: folderId,
+                    name: pendingFolderName,
+                    parentId,
+                    order: nextOrder(parentId),
+                    isSystem: false
+                });
+            }
+
+            folderStack.push(folderId);
+            pendingFolderName = null;
+        } else if (tag === "/DL") {
+            if (folderStack.length > 1) folderStack.pop();
+            pendingFolderName = null;
+        } else if (tag === "A") {
+            const hrefMatch = attrs.match(/HREF\s*=\s*"([^"]*)"/i) || attrs.match(/HREF\s*=\s*'([^']*)'/i);
+            const url = hrefMatch ? hrefMatch[1] : "";
+            if (!url) continue;
+
+            const title = text
+                .replace(/&amp;/g, "&")
+                .replace(/&lt;/g, "<")
+                .replace(/&gt;/g, ">")
+                .replace(/&quot;/g, '"') || url;
+            const folderId = folderStack[folderStack.length - 1] || OTHER_BOOKMARKS_ID;
+
+            bookmarks.push({
+                id: createBookmarkId("bm"),
+                title,
+                url,
+                folderId,
+                dateAdded: Date.now(),
+                order: nextOrder(folderId)
+            });
+        }
+    }
+
+    return { folders, bookmarks };
+}
+
+ipcMain.handle("bookmarks:get", async () => {
+    try {
+        return { success: true, data: readBookmarksStore() };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("bookmarks:add", async (event, payload) => {
+    try {
+        const data = readBookmarksStore();
+        const folderId = payload.folderId || BOOKMARKS_BAR_ID;
+        const folderExists = data.folders.some((f) => f.id === folderId);
+
+        if (!folderExists) {
+            return { success: false, error: "Folder not found." };
+        }
+
+        const url = (payload.url || "").trim();
+        if (!url) {
+            return { success: false, error: "URL is required." };
+        }
+
+        const existing = data.bookmarks.find(
+            (b) => b.url === url && b.folderId === folderId
+        );
+        if (existing) {
+            return { success: true, data, bookmark: existing, alreadyExists: true };
+        }
+
+        const sameFolder = data.bookmarks.filter((b) => b.folderId === folderId);
+        const bookmark = {
+            id: createBookmarkId("bm"),
+            title: (payload.title || url).trim() || url,
+            url,
+            folderId,
+            dateAdded: Date.now(),
+            order: sameFolder.length
+        };
+
+        data.bookmarks.push(bookmark);
+        writeBookmarksStore(data);
+
+        return { success: true, data, bookmark };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("bookmarks:update", async (event, payload) => {
+    try {
+        const data = readBookmarksStore();
+        const index = data.bookmarks.findIndex((b) => b.id === payload.id);
+
+        if (index < 0) {
+            return { success: false, error: "Bookmark not found." };
+        }
+
+        const current = data.bookmarks[index];
+        const nextFolderId = payload.folderId || current.folderId;
+
+        if (!data.folders.some((f) => f.id === nextFolderId)) {
+            return { success: false, error: "Folder not found." };
+        }
+
+        data.bookmarks[index] = {
+            ...current,
+            title: payload.title !== undefined ? String(payload.title).trim() || current.title : current.title,
+            url: payload.url !== undefined ? String(payload.url).trim() || current.url : current.url,
+            folderId: nextFolderId
+        };
+
+        writeBookmarksStore(data);
+        return { success: true, data, bookmark: data.bookmarks[index] };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("bookmarks:delete", async (event, id) => {
+    try {
+        const data = readBookmarksStore();
+        const before = data.bookmarks.length;
+        data.bookmarks = data.bookmarks.filter((b) => b.id !== id);
+
+        if (data.bookmarks.length === before) {
+            return { success: false, error: "Bookmark not found." };
+        }
+
+        writeBookmarksStore(data);
+        return { success: true, data };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("bookmarks:add-folder", async (event, payload) => {
+    try {
+        const data = readBookmarksStore();
+        const name = (payload.name || "").trim();
+        const parentId = payload.parentId || OTHER_BOOKMARKS_ID;
+
+        if (!name) {
+            return { success: false, error: "Folder name is required." };
+        }
+
+        if (!data.folders.some((f) => f.id === parentId)) {
+            return { success: false, error: "Parent folder not found." };
+        }
+
+        const siblings = data.folders.filter((f) => f.parentId === parentId);
+        const folder = {
+            id: createBookmarkId("folder"),
+            name,
+            parentId,
+            order: siblings.length,
+            isSystem: false
+        };
+
+        data.folders.push(folder);
+        writeBookmarksStore(data);
+
+        return { success: true, data, folder };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("bookmarks:update-folder", async (event, payload) => {
+    try {
+        const data = readBookmarksStore();
+        const index = data.folders.findIndex((f) => f.id === payload.id);
+
+        if (index < 0) {
+            return { success: false, error: "Folder not found." };
+        }
+
+        if (data.folders[index].isSystem && payload.name !== undefined) {
+            // System folders keep their identity; renaming is allowed for display only except bar/other labels stay fixed
+            if (data.folders[index].id === BOOKMARKS_BAR_ID || data.folders[index].id === OTHER_BOOKMARKS_ID) {
+                return { success: false, error: "System folders cannot be renamed." };
+            }
+        }
+
+        if (payload.name !== undefined) {
+            const name = String(payload.name).trim();
+            if (!name) {
+                return { success: false, error: "Folder name is required." };
+            }
+            data.folders[index].name = name;
+        }
+
+        writeBookmarksStore(data);
+        return { success: true, data, folder: data.folders[index] };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("bookmarks:delete-folder", async (event, id) => {
+    try {
+        const data = readBookmarksStore();
+        const folder = data.folders.find((f) => f.id === id);
+
+        if (!folder) {
+            return { success: false, error: "Folder not found." };
+        }
+
+        if (folder.isSystem || id === BOOKMARKS_BAR_ID || id === OTHER_BOOKMARKS_ID) {
+            return { success: false, error: "System folders cannot be deleted." };
+        }
+
+        const toDelete = new Set([id]);
+        let changed = true;
+
+        while (changed) {
+            changed = false;
+            data.folders.forEach((f) => {
+                if (f.parentId && toDelete.has(f.parentId) && !toDelete.has(f.id)) {
+                    toDelete.add(f.id);
+                    changed = true;
+                }
+            });
+        }
+
+        data.folders = data.folders.filter((f) => !toDelete.has(f.id));
+        data.bookmarks = data.bookmarks.filter((b) => !toDelete.has(b.folderId));
+        writeBookmarksStore(data);
+
+        return { success: true, data };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("bookmarks:export-html", async () => {
+    try {
+        const data = readBookmarksStore();
+        const win = BrowserWindow.getFocusedWindow();
+        const { canceled, filePath } = await dialog.showSaveDialog(win, {
+            title: "Export Bookmarks",
+            defaultPath: "bookmarks.html",
+            filters: [
+                { name: "HTML Bookmarks", extensions: ["html", "htm"] },
+                { name: "All Files", extensions: ["*"] }
+            ]
+        });
+
+        if (canceled || !filePath) {
+            return { success: false, canceled: true };
+        }
+
+        await fs.promises.writeFile(filePath, buildBookmarkHtml(data), "utf8");
+        return { success: true, path: filePath };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("bookmarks:import-html", async () => {
+    try {
+        const win = BrowserWindow.getFocusedWindow();
+        const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+            title: "Import Bookmarks",
+            properties: ["openFile"],
+            filters: [
+                { name: "HTML Bookmarks", extensions: ["html", "htm"] },
+                { name: "All Files", extensions: ["*"] }
+            ]
+        });
+
+        if (canceled || !filePaths || !filePaths.length) {
+            return { success: false, canceled: true };
+        }
+
+        const html = await fs.promises.readFile(filePaths[0], "utf8");
+        const parsed = parseBookmarkHtml(html);
+        const data = readBookmarksStore();
+
+        parsed.folders.forEach((folder) => {
+            if (!data.folders.some((f) => f.id === folder.id)) {
+                data.folders.push(folder);
+            }
+        });
+
+        const existingUrls = new Set(data.bookmarks.map((b) => `${b.folderId}::${b.url}`));
+        let importedCount = 0;
+
+        parsed.bookmarks.forEach((bookmark) => {
+            const key = `${bookmark.folderId}::${bookmark.url}`;
+            if (existingUrls.has(key)) return;
+            data.bookmarks.push(bookmark);
+            existingUrls.add(key);
+            importedCount += 1;
+        });
+
+        writeBookmarksStore(data);
+
+        return {
+            success: true,
+            data,
+            importedCount,
+            folderCount: parsed.folders.length
+        };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
