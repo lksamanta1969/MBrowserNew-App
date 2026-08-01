@@ -66,8 +66,8 @@ app.post("/send", async (req, res) => {
             cc: mail.cc,
             subject: mail.subject,
             text: mail.msg,
-            // কেউ এই মেইলে রিপ্লাই দিলে যাতে আপনার মেইল সিস্টেমে আসে
-            replyTo: senderIdentity 
+            // Replies must land in the real Gmail mailbox that IMAP syncs
+            replyTo: process.env.EMAIL_USER
         });
 
         // ডেটাবেজে সেভ করার আগে নিশ্চিত করুন কার কাছ থেকে পাঠানো হয়েছে
