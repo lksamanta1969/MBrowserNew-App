@@ -60,6 +60,21 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke("bookmarks:import-html"),
 
     bookmarksExportHtml: () =>
-      ipcRenderer.invoke("bookmarks:export-html")
+      ipcRenderer.invoke("bookmarks:export-html"),
+
+    historyGet: () =>
+      ipcRenderer.invoke("history:get"),
+
+    historyRecord: (payload) =>
+      ipcRenderer.invoke("history:record", payload),
+
+    historyUpdateTitle: (payload) =>
+      ipcRenderer.invoke("history:update-title", payload),
+
+    historyDelete: (payload) =>
+      ipcRenderer.invoke("history:delete", payload),
+
+    historyDeleteRange: (range) =>
+      ipcRenderer.invoke("history:delete-range", range)
   }
 );

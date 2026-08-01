@@ -32,6 +32,7 @@
       
       <button id="bookmarkStarBtn" class="bookmark-star" onclick="Bookmarks.toggleOrEditCurrent()" title="Bookmark this page" aria-label="Bookmark this page">☆</button>
       <button id="bookmarkManagerBtn" onclick="Bookmarks.openManager()" title="Bookmark Manager" aria-label="Bookmark Manager">📑</button>
+      <button id="historyManagerBtn" onclick="History.openManager()" title="History" aria-label="History">🕐</button>
     <button id="appsBtn" onclick="toggleApps()">⋮</button>
       <button onclick="loadSite()">Go</button>
     </div>
@@ -101,8 +102,45 @@
   </div>
 </div>
 
+<!-- History Manager -->
+<div id="historyManager" class="hist-manager" role="dialog" aria-modal="true" aria-labelledby="histManagerTitle">
+  <div class="hist-manager-panel">
+    <div class="hist-manager-header">
+      <h2 id="histManagerTitle">History</h2>
+      <button type="button" class="bm-icon-btn" onclick="History.closeManager()" title="Close">✕</button>
+    </div>
+    <div class="hist-manager-toolbar">
+      <input id="histSearchInput" type="search" placeholder="Search history" oninput="History.onSearchInput(this.value)">
+      <button type="button" class="danger" onclick="History.deleteSelected()">Delete selected</button>
+      <button type="button" class="danger" onclick="History.deleteToday()">Delete today</button>
+      <button type="button" class="danger" onclick="History.deleteYesterday()">Delete yesterday</button>
+      <button type="button" class="danger" onclick="History.clearAll()">Clear all history</button>
+    </div>
+    <div class="hist-manager-body">
+      <aside class="hist-manager-sidebar">
+        <button type="button" class="hist-filter-btn" data-hist-filter="today" onclick="History.setFilter('today')">Today</button>
+        <button type="button" class="hist-filter-btn" data-hist-filter="yesterday" onclick="History.setFilter('yesterday')">Yesterday</button>
+        <button type="button" class="hist-filter-btn" data-hist-filter="last7" onclick="History.setFilter('last7')">Last 7 Days</button>
+        <button type="button" class="hist-filter-btn" data-hist-filter="lastMonth" onclick="History.setFilter('lastMonth')">Last Month</button>
+        <button type="button" class="hist-filter-btn active" data-hist-filter="all" onclick="History.setFilter('all')">All History</button>
+      </aside>
+      <section class="hist-manager-main">
+        <div class="hist-list-header">
+          <label class="hist-select-all">
+            <input id="histSelectAll" type="checkbox" onchange="History.toggleSelectAll(this.checked)">
+            Select all
+          </label>
+          <h3 id="histListHeading">History</h3>
+        </div>
+        <div id="histList" class="hist-list"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
  <script src="apps/browser/BrowserTab.js"></script>
  <script src="apps/browser/Bookmarks.js"></script>
+ <script src="apps/browser/History.js"></script>
  <script src="apps/browser/browser.js"></script>
 
 <script type="module">

@@ -90,17 +90,45 @@ function loadSite(){
 browser.addEventListener("did-navigate", (e) => {
     document.getElementById("url").value = e.url;
     if (window.Bookmarks) Bookmarks.onPageChanged();
+    if (window.History) {
+        let title = e.url;
+        try {
+            if (browser.getTitle) title = browser.getTitle() || e.url;
+        } catch (err) {
+            /* webview may not be ready */
+        }
+        History.recordVisit(e.url, title);
+    }
 });
 
 browser.addEventListener("did-navigate-in-page", (e) => {
     if (e && e.url) {
         document.getElementById("url").value = e.url;
         if (window.Bookmarks) Bookmarks.onPageChanged();
+        if (window.History) {
+            let title = e.url;
+            try {
+                if (browser.getTitle) title = browser.getTitle() || e.url;
+            } catch (err) {
+                /* ignore */
+            }
+            History.recordVisit(e.url, title);
+        }
     }
 });
 
-browser.addEventListener("page-title-updated", () => {
+browser.addEventListener("page-title-updated", (e) => {
     if (window.Bookmarks) Bookmarks.onPageChanged();
+    if (window.History) {
+        let url = "";
+        try {
+            url = browser.getURL() || document.getElementById("url").value || "";
+        } catch (err) {
+            url = document.getElementById("url").value || "";
+        }
+        const title = (e && e.title) || "";
+        if (url && title) History.updateTitle(url, title);
+    }
 });
 
 function newTab(){
@@ -133,6 +161,9 @@ window.onload = function(){
     setTimeout(() => { document.getElementById("url").focus(); }, 300);
     if (window.Bookmarks) {
         Bookmarks.init();
+    }
+    if (window.History) {
+        History.init();
     }
 }
 document.addEventListener("DOMContentLoaded", () => {

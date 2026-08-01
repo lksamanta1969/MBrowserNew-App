@@ -786,3 +786,246 @@ ipcMain.handle("bookmarks:import-html", async () => {
         return { success: false, error: error.message };
     }
 });
+
+/* ===================== History ===================== */
+
+const HISTORY_MAX_ENTRIES = 10000;
+
+function historyFilePath() {
+    return path.join(app.getPath("userData"), "history.json");
+}
+
+function createHistoryId() {
+    return `hist_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function defaultHistoryData() {
+    return {
+        version: 1,
+        entries: []
+    };
+}
+
+function readHistoryStore() {
+    const filePath = historyFilePath();
+
+    if (!fs.existsSync(filePath)) {
+        const data = defaultHistoryData();
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+        return data;
+    }
+
+    try {
+        const raw = fs.readFileSync(filePath, "utf8");
+        const data = JSON.parse(raw || "{}");
+
+        if (!Array.isArray(data.entries)) {
+            return defaultHistoryData();
+        }
+
+        return {
+            version: data.version || 1,
+            entries: data.entries
+        };
+    } catch (error) {
+        console.error("[HISTORY] Failed to read store:", error);
+        return defaultHistoryData();
+    }
+}
+
+function writeHistoryStore(data) {
+    const filePath = historyFilePath();
+    const dir = path.dirname(filePath);
+
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+
+    if (Array.isArray(data.entries) && data.entries.length > HISTORY_MAX_ENTRIES) {
+        data.entries.sort((a, b) => (b.lastVisited || 0) - (a.lastVisited || 0));
+        data.entries = data.entries.slice(0, HISTORY_MAX_ENTRIES);
+    }
+
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+}
+
+function startOfLocalDay(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+}
+
+function endOfLocalDay(date) {
+    const d = new Date(date);
+    d.setHours(23, 59, 59, 999);
+    return d.getTime();
+}
+
+function getHistoryRangeBounds(range) {
+    const now = Date.now();
+    const todayStart = startOfLocalDay(now);
+    const todayEnd = endOfLocalDay(now);
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    switch (range) {
+        case "today":
+            return { from: todayStart, to: todayEnd };
+        case "yesterday":
+            return { from: todayStart - dayMs, to: todayStart - 1 };
+        case "last7":
+            return { from: todayStart - 6 * dayMs, to: todayEnd };
+        case "lastMonth":
+            return { from: todayStart - 29 * dayMs, to: todayEnd };
+        case "all":
+        default:
+            return { from: 0, to: now };
+    }
+}
+
+function normalizeHistoryUrl(url) {
+    return String(url || "").trim();
+}
+
+function isRecordableHistoryUrl(url) {
+    if (!url) return false;
+    if (url === "about:blank") return false;
+    if (url.startsWith("chrome://") || url.startsWith("chrome-error://")) return false;
+    if (url.startsWith("data:")) return false;
+    return url.startsWith("http://") || url.startsWith("https://");
+}
+
+ipcMain.handle("history:get", async () => {
+    try {
+        return { success: true, data: readHistoryStore() };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("history:record", async (event, payload) => {
+    try {
+        const url = normalizeHistoryUrl(payload && payload.url);
+        if (!isRecordableHistoryUrl(url)) {
+            return { success: false, error: "URL is not recordable.", skipped: true };
+        }
+
+        const data = readHistoryStore();
+        const now = Number(payload.visitTime) || Date.now();
+        const title = String((payload && payload.title) || "").trim() || url;
+        const existing = data.entries.find((entry) => entry.url === url);
+
+        if (existing) {
+            // Avoid double-count from rapid did-navigate + in-page for same URL
+            if (existing.lastVisited && now - existing.lastVisited < 1500) {
+                if (title && title !== url) existing.title = title;
+                writeHistoryStore(data);
+                return { success: true, data, entry: existing, deduped: true };
+            }
+
+            existing.title = title || existing.title;
+            existing.visitCount = (existing.visitCount || 1) + 1;
+            existing.lastVisited = now;
+            writeHistoryStore(data);
+            return { success: true, data, entry: existing };
+        }
+
+        const entry = {
+            id: createHistoryId(),
+            url,
+            title,
+            visitTime: now,
+            visitCount: 1,
+            lastVisited: now
+        };
+
+        data.entries.unshift(entry);
+        writeHistoryStore(data);
+
+        return { success: true, data, entry };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("history:update-title", async (event, payload) => {
+    try {
+        const url = normalizeHistoryUrl(payload && payload.url);
+        const title = String((payload && payload.title) || "").trim();
+
+        if (!url || !title) {
+            return { success: false, error: "URL and title are required." };
+        }
+
+        const data = readHistoryStore();
+        const entry = data.entries.find((item) => item.url === url);
+
+        if (!entry) {
+            return { success: false, error: "History entry not found.", skipped: true };
+        }
+
+        entry.title = title;
+        writeHistoryStore(data);
+
+        return { success: true, data, entry };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("history:delete", async (event, payload) => {
+    try {
+        const data = readHistoryStore();
+        const ids = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload && payload.ids)
+              ? payload.ids
+              : payload && payload.id
+                ? [payload.id]
+                : [];
+
+        if (!ids.length) {
+            return { success: false, error: "No history ids provided." };
+        }
+
+        const idSet = new Set(ids.map(String));
+        const before = data.entries.length;
+        data.entries = data.entries.filter((entry) => !idSet.has(String(entry.id)));
+
+        writeHistoryStore(data);
+
+        return {
+            success: true,
+            data,
+            deletedCount: before - data.entries.length
+        };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("history:delete-range", async (event, range) => {
+    try {
+        const data = readHistoryStore();
+        const bounds = getHistoryRangeBounds(range || "all");
+        const before = data.entries.length;
+
+        if (range === "all") {
+            data.entries = [];
+        } else {
+            data.entries = data.entries.filter((entry) => {
+                const ts = entry.lastVisited || entry.visitTime || 0;
+                return ts < bounds.from || ts > bounds.to;
+            });
+        }
+
+        writeHistoryStore(data);
+
+        return {
+            success: true,
+            data,
+            deletedCount: before - data.entries.length
+        };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
