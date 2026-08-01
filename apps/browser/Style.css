@@ -1121,3 +1121,164 @@ body[data-theme="dark"] .settings-manager-main h3{ color: #fde68a; }
 .dl-row.status-interrupted .dl-progress-bar{ background: #dc2626; }
 .dl-row.status-cancelled .dl-progress-bar{ background: #6b7280; }
 .dl-row.status-paused .dl-progress-bar{ background: #ca8a04; }
+
+/* ===== Passwords ===== */
+#passwordManagerBtn{
+    background: #fafafa;
+    font-size: 16px;
+    min-width: 44px;
+}
+.pw-manager{
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1000000;
+    align-items: stretch;
+    justify-content: center;
+    padding: 28px;
+}
+.pw-manager.open{ display: flex; }
+.pw-manager-panel{
+    width: min(960px, 100%);
+    background: var(--mb-surface, #fff);
+    color: var(--mb-text, #1f2937);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.pw-manager-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--mb-accent, #b45309);
+    color: white;
+}
+.pw-manager-header h2{ margin: 0; font-size: 20px; }
+.pw-manager-toolbar{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--mb-border, #e5e7eb);
+    background: var(--mb-toolbar, #fff7ed);
+}
+.pw-manager-toolbar input[type="search"]{
+    flex: 1;
+    min-width: 180px;
+    height: 36px;
+    border: 1px solid var(--mb-border, #e5e7eb);
+    border-radius: 8px;
+    padding: 0 12px;
+    background: var(--mb-surface, #fff);
+    color: var(--mb-text, #1f2937);
+}
+.pw-manager-toolbar button{
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    padding: 0 12px;
+    background: #92400e;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+.pw-manager-toolbar button.danger{ background: #b91c1c; }
+.pw-manager-body{
+    min-height: 420px;
+    max-height: calc(100vh - 180px);
+    overflow: auto;
+}
+.pw-manager-main{ padding: 12px 16px 16px; }
+.pw-manager-main h3{
+    margin: 0 0 10px;
+    color: #78350f;
+    font-size: 16px;
+}
+.pw-list-empty{
+    color: var(--mb-muted, #6b7280);
+    padding: 24px 8px;
+    text-align: center;
+}
+.pw-row{
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    border: 1px solid var(--mb-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: var(--mb-surface-2, #fafafa);
+}
+.pw-row-main{ flex: 1; min-width: 0; }
+.pw-site{
+    font-weight: 700;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pw-username{
+    font-size: 13px;
+    color: var(--mb-text, #374151);
+    margin-top: 2px;
+}
+.pw-password-line{
+    margin-top: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: #92400e;
+}
+.pw-meta{
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--mb-muted, #6b7280);
+}
+.pw-notes{
+    margin-top: 4px;
+    font-size: 12px;
+    color: #6b7280;
+}
+.pw-actions{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.pw-actions button{
+    border: none;
+    border-radius: 8px;
+    padding: 7px 10px;
+    background: #e5e7eb;
+    color: #374151;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+}
+.pw-actions button.primary{
+    background: #b45309;
+    color: white;
+}
+.pw-actions button.danger{
+    background: #fee2e2;
+    color: #b91c1c;
+}
+.pw-form-password-row{
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.pw-form-password-row input{ flex: 1; }
+.pw-form-password-row button{
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    padding: 0 12px;
+    background: #e5e7eb;
+    color: #374151;
+    font-weight: 600;
+    cursor: pointer;
+}

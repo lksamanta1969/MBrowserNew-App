@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, session, Notification } = require("electron");
+﻿const { app, BrowserWindow, ipcMain, shell, dialog, session, Notification, clipboard } = require("electron");
 const { spawn, execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
@@ -89,7 +89,7 @@ app.on("before-quit", () => {
     }
 });
 
-// mdrive-এর জন্য ফাইল সেভ করার হ্যান্ডলার (Safe and untouched)
+// mdrive-à¦à¦° à¦œà¦¨à§à¦¯ à¦«à¦¾à¦‡à¦² à¦¸à§‡à¦­ à¦•à¦°à¦¾à¦° à¦¹à§à¦¯à¦¾à¦¨à§à¦¡à¦²à¦¾à¦° (Safe and untouched)
 
 ipcMain.handle("save-file", async (event, sourcePath, folderName) => {
     try {
@@ -1719,3 +1719,184 @@ ipcMain.handle("downloads:show-in-folder", async (event, id) => {
         return { success: false, error: error.message };
     }
 });
+
+/* ===================== Passwords (Phase 1E-A Storage Engine) ===================== */
+
+function passwordsFilePath() {
+    return path.join(app.getPath("userData"), "passwords.json");
+}
+
+function createPasswordId() {
+    return `pw_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function defaultPasswordsData() {
+    return {
+        version: 1,
+        entries: []
+    };
+}
+
+function readPasswordsStore() {
+    const filePath = passwordsFilePath();
+
+    if (!fs.existsSync(filePath)) {
+        const data = defaultPasswordsData();
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+        return data;
+    }
+
+    try {
+        const raw = fs.readFileSync(filePath, "utf8");
+        const data = JSON.parse(raw || "{}");
+        if (!Array.isArray(data.entries)) return defaultPasswordsData();
+        return { version: data.version || 1, entries: data.entries };
+    } catch (error) {
+        console.error("[PASSWORDS] Failed to read store:", error);
+        return defaultPasswordsData();
+    }
+}
+
+function writePasswordsStore(data) {
+    const filePath = passwordsFilePath();
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+}
+
+function derivePasswordOrigin(urlOrOrigin) {
+    const raw = String(urlOrOrigin || "").trim();
+    if (!raw) return "";
+    try {
+        const withProto = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(raw) ? raw : "https://" + raw;
+        return new URL(withProto).origin;
+    } catch (e) {
+        return raw;
+    }
+}
+
+function normalizePasswordUrl(url) {
+    return String(url || "").trim();
+}
+
+ipcMain.handle("passwords:get", async () => {
+    try {
+        return { success: true, data: readPasswordsStore() };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("passwords:add", async (event, payload) => {
+    try {
+        const url = normalizePasswordUrl(payload && payload.url);
+        const username = String((payload && payload.username) || "").trim();
+        const password = String((payload && payload.password) || "");
+        const notes = String((payload && payload.notes) || "").trim();
+        const origin = derivePasswordOrigin((payload && payload.origin) || url);
+
+        if (!url && !origin) {
+            return { success: false, error: "Site URL or origin is required." };
+        }
+        if (!username) {
+            return { success: false, error: "Username is required." };
+        }
+
+        const data = readPasswordsStore();
+        const now = Date.now();
+        const entry = {
+            id: createPasswordId(),
+            origin: origin || derivePasswordOrigin(url),
+            url: url || origin,
+            username,
+            password,
+            notes,
+            createdAt: now,
+            updatedAt: now
+        };
+
+        data.entries.unshift(entry);
+        writePasswordsStore(data);
+        return { success: true, data, entry };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("passwords:update", async (event, payload) => {
+    try {
+        const id = payload && payload.id;
+        if (!id) return { success: false, error: "Password id is required." };
+
+        const data = readPasswordsStore();
+        const entry = data.entries.find((item) => item.id === id);
+        if (!entry) return { success: false, error: "Password entry not found." };
+
+        if (payload.url !== undefined) entry.url = normalizePasswordUrl(payload.url);
+        if (payload.username !== undefined) entry.username = String(payload.username || "").trim();
+        if (payload.password !== undefined) entry.password = String(payload.password || "");
+        if (payload.notes !== undefined) entry.notes = String(payload.notes || "").trim();
+        if (payload.origin !== undefined) {
+            entry.origin = derivePasswordOrigin(payload.origin);
+        } else if (payload.url !== undefined) {
+            entry.origin = derivePasswordOrigin(entry.url);
+        }
+
+        if (!entry.url && !entry.origin) {
+            return { success: false, error: "Site URL or origin is required." };
+        }
+        if (!entry.username) {
+            return { success: false, error: "Username is required." };
+        }
+
+        entry.updatedAt = Date.now();
+        writePasswordsStore(data);
+        return { success: true, data, entry };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("passwords:delete", async (event, payload) => {
+    try {
+        const ids = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload && payload.ids)
+              ? payload.ids
+              : payload && payload.id
+                ? [payload.id]
+                : [];
+        if (!ids.length) return { success: false, error: "No password ids provided." };
+
+        const idSet = new Set(ids.map(String));
+        const data = readPasswordsStore();
+        const before = data.entries.length;
+        data.entries = data.entries.filter((entry) => !idSet.has(String(entry.id)));
+        writePasswordsStore(data);
+        return { success: true, data, deletedCount: before - data.entries.length };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("passwords:clear", async () => {
+    try {
+        const data = readPasswordsStore();
+        const deletedCount = data.entries.length;
+        data.entries = [];
+        writePasswordsStore(data);
+        return { success: true, data, deletedCount };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("clipboard:write-text", async (_event, text) => {
+    try {
+        clipboard.writeText(String(text || ""));
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+

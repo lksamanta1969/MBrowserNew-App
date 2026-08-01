@@ -132,6 +132,24 @@ contextBridge.exposeInMainWorld(
       const listener = (_event, payload) => callback(payload);
       ipcRenderer.on("downloads:progress", listener);
       return () => ipcRenderer.removeListener("downloads:progress", listener);
-    }
+    },
+
+    passwordsGet: () =>
+      ipcRenderer.invoke("passwords:get"),
+
+    passwordsAdd: (payload) =>
+      ipcRenderer.invoke("passwords:add", payload),
+
+    passwordsUpdate: (payload) =>
+      ipcRenderer.invoke("passwords:update", payload),
+
+    passwordsDelete: (payload) =>
+      ipcRenderer.invoke("passwords:delete", payload),
+
+    passwordsClear: () =>
+      ipcRenderer.invoke("passwords:clear"),
+
+    clipboardWriteText: (text) =>
+      ipcRenderer.invoke("clipboard:write-text", text)
   }
 );

@@ -183,6 +183,9 @@ window.onload = async function(){
     if (window.Downloads) {
         Downloads.init();
     }
+    if (window.Passwords) {
+        Passwords.init();
+    }
 }
 document.addEventListener("DOMContentLoaded", () => {
     if (window.BrowserTab) {

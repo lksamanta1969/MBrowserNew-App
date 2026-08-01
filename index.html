@@ -34,6 +34,7 @@
       <button id="bookmarkManagerBtn" onclick="Bookmarks.openManager()" title="Bookmark Manager" aria-label="Bookmark Manager">📑</button>
       <button id="historyManagerBtn" onclick="History.openManager()" title="History" aria-label="History">🕐</button>
       <button id="downloadsManagerBtn" onclick="Downloads.openManager()" title="Downloads" aria-label="Downloads">⬇</button>
+      <button id="passwordManagerBtn" onclick="Passwords.openManager()" title="Passwords" aria-label="Passwords">🔑</button>
       <button id="settingsBtn" onclick="Settings.openManager()" title="Settings" aria-label="Settings">⚙</button>
     <button id="appsBtn" onclick="toggleApps()">⋮</button>
       <button onclick="loadSite()">Go</button>
@@ -171,6 +172,50 @@
   </div>
 </div>
 
+<!-- Password Manager -->
+<div id="passwordManager" class="pw-manager" role="dialog" aria-modal="true" aria-labelledby="pwManagerTitle">
+  <div class="pw-manager-panel">
+    <div class="pw-manager-header">
+      <h2 id="pwManagerTitle">Passwords</h2>
+      <button type="button" class="bm-icon-btn" onclick="Passwords.closeManager()" title="Close">✕</button>
+    </div>
+    <div class="pw-manager-toolbar">
+      <input id="pwSearchInput" type="search" placeholder="Search passwords" oninput="Passwords.onSearchInput(this.value)">
+      <button type="button" onclick="Passwords.openAddDialog()">Add password</button>
+      <button type="button" class="danger" onclick="Passwords.clearAll()">Clear all</button>
+    </div>
+    <div class="pw-manager-body">
+      <section class="pw-manager-main">
+        <h3 id="pwListHeading">Saved passwords</h3>
+        <div id="pwList" class="pw-list"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div id="pwFormBackdrop" class="bm-dialog-backdrop">
+  <div class="bm-dialog" role="dialog" aria-modal="true">
+    <h3 id="pwFormTitle">Add password</h3>
+    <label for="pwFormUrl">Site URL</label>
+    <input id="pwFormUrl" type="text" autocomplete="off" placeholder="https://example.com">
+    <label for="pwFormUsername">Username</label>
+    <input id="pwFormUsername" type="text" autocomplete="off">
+    <label for="pwFormPassword">Password</label>
+    <div class="pw-form-password-row">
+      <input id="pwFormPassword" type="password" autocomplete="off">
+      <button type="button" onclick="Passwords.toggleFormPasswordVisibility()">Show</button>
+    </div>
+    <label for="pwFormNotes">Notes</label>
+    <input id="pwFormNotes" type="text" autocomplete="off" placeholder="Optional">
+    <div class="bm-dialog-actions">
+      <button type="button" id="pwFormDeleteBtn" class="danger" onclick="Passwords.deleteFromForm()">Delete</button>
+      <div class="bm-dialog-spacer"></div>
+      <button type="button" onclick="Passwords.closeFormDialog()">Cancel</button>
+      <button type="button" class="primary" onclick="Passwords.saveForm()">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- Settings Manager -->
 <div id="settingsManager" class="settings-manager" role="dialog" aria-modal="true" aria-labelledby="settingsManagerTitle">
   <div class="settings-manager-panel">
@@ -199,6 +244,7 @@
  <script src="apps/browser/Bookmarks.js"></script>
  <script src="apps/browser/History.js"></script>
  <script src="apps/browser/Downloads.js"></script>
+ <script src="apps/browser/Passwords.js"></script>
  <script src="apps/browser/browser.js"></script>
 
 <script type="module">
