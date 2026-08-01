@@ -33,6 +33,7 @@
       <button id="bookmarkStarBtn" class="bookmark-star" onclick="Bookmarks.toggleOrEditCurrent()" title="Bookmark this page" aria-label="Bookmark this page">☆</button>
       <button id="bookmarkManagerBtn" onclick="Bookmarks.openManager()" title="Bookmark Manager" aria-label="Bookmark Manager">📑</button>
       <button id="historyManagerBtn" onclick="History.openManager()" title="History" aria-label="History">🕐</button>
+      <button id="downloadsManagerBtn" onclick="Downloads.openManager()" title="Downloads" aria-label="Downloads">⬇</button>
       <button id="settingsBtn" onclick="Settings.openManager()" title="Settings" aria-label="Settings">⚙</button>
     <button id="appsBtn" onclick="toggleApps()">⋮</button>
       <button onclick="loadSite()">Go</button>
@@ -139,6 +140,37 @@
   </div>
 </div>
 
+<!-- Downloads Manager -->
+<div id="downloadsManager" class="dl-manager" role="dialog" aria-modal="true" aria-labelledby="dlManagerTitle">
+  <div class="dl-manager-panel">
+    <div class="dl-manager-header">
+      <h2 id="dlManagerTitle">Downloads</h2>
+      <button type="button" class="bm-icon-btn" onclick="Downloads.closeManager()" title="Close">✕</button>
+    </div>
+    <div class="dl-manager-toolbar">
+      <input id="dlSearchInput" type="search" placeholder="Search downloads" oninput="Downloads.onSearchInput(this.value)">
+      <button type="button" onclick="Downloads.clearCompleted()">Clear completed</button>
+      <button type="button" class="danger" onclick="Downloads.clearAll()">Clear all</button>
+    </div>
+    <div class="dl-manager-body">
+      <aside class="dl-manager-sidebar">
+        <button type="button" class="dl-filter-btn active" data-dl-filter="all" onclick="Downloads.setFilter('all')">All</button>
+        <button type="button" class="dl-filter-btn" data-dl-filter="active" onclick="Downloads.setFilter('active')">Active</button>
+        <button type="button" class="dl-filter-btn" data-dl-filter="completed" onclick="Downloads.setFilter('completed')">Completed</button>
+        <button type="button" class="dl-filter-btn" data-dl-filter="failed" onclick="Downloads.setFilter('failed')">Failed</button>
+        <button type="button" class="dl-filter-btn" data-dl-filter="cancelled" onclick="Downloads.setFilter('cancelled')">Cancelled</button>
+        <button type="button" class="dl-filter-btn" data-dl-filter="today" onclick="Downloads.setFilter('today')">Today</button>
+        <button type="button" class="dl-filter-btn" data-dl-filter="last7" onclick="Downloads.setFilter('last7')">Last 7 Days</button>
+        <button type="button" class="dl-filter-btn" data-dl-filter="lastMonth" onclick="Downloads.setFilter('lastMonth')">Last Month</button>
+      </aside>
+      <section class="dl-manager-main">
+        <h3 id="dlListHeading">Downloads</h3>
+        <div id="dlList" class="dl-list"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
 <!-- Settings Manager -->
 <div id="settingsManager" class="settings-manager" role="dialog" aria-modal="true" aria-labelledby="settingsManagerTitle">
   <div class="settings-manager-panel">
@@ -166,6 +198,7 @@
  <script src="apps/browser/Settings.js"></script>
  <script src="apps/browser/Bookmarks.js"></script>
  <script src="apps/browser/History.js"></script>
+ <script src="apps/browser/Downloads.js"></script>
  <script src="apps/browser/browser.js"></script>
 
 <script type="module">

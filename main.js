@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, session } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, session, Notification } = require("electron");
 const { spawn, execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
@@ -62,6 +62,7 @@ app.whenReady().then(() => {
     console.error("[SERVER ERROR]", data.toString());
   });
 
+  registerBrowserDownloadCapture();
   createWindow();
 
   app.on("activate", () => {
@@ -70,8 +71,21 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+    try {
+        flushDownloadsPersist();
+    } catch (e) {
+        /* ignore */
+    }
     if (process.platform !== "darwin") {
         app.quit();
+    }
+});
+
+app.on("before-quit", () => {
+    try {
+        flushDownloadsPersist();
+    } catch (e) {
+        /* ignore */
     }
 });
 
@@ -1267,10 +1281,440 @@ ipcMain.handle("settings:clear-privacy", async (event, target) => {
         }
 
         if (type === "downloads" || type === "all") {
+            const downloads = readDownloadsStore();
+            downloads.items = [];
+            writeDownloadsStore(downloads);
+            broadcastDownloads("downloads:changed", { data: downloads });
             results.downloads = true;
         }
 
         return { success: true, results };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+/* ===================== Downloads ===================== */
+
+const activeDownloadItems = new Map();
+const downloadSpeedState = new Map();
+let downloadsCache = null;
+let downloadsPersistTimer = null;
+
+function downloadsFilePath() {
+    return path.join(app.getPath("userData"), "downloads.json");
+}
+
+function defaultDownloadsData() {
+    return {
+        version: 1,
+        items: []
+    };
+}
+
+function readDownloadsStore() {
+    if (downloadsCache) return downloadsCache;
+
+    const filePath = downloadsFilePath();
+
+    if (!fs.existsSync(filePath)) {
+        const data = defaultDownloadsData();
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+        downloadsCache = data;
+        return data;
+    }
+
+    try {
+        const raw = fs.readFileSync(filePath, "utf8");
+        const data = JSON.parse(raw || "{}");
+        if (!Array.isArray(data.items)) {
+            downloadsCache = defaultDownloadsData();
+            return downloadsCache;
+        }
+        downloadsCache = { version: data.version || 1, items: data.items };
+        return downloadsCache;
+    } catch (error) {
+        console.error("[DOWNLOADS] Failed to read store:", error);
+        downloadsCache = defaultDownloadsData();
+        return downloadsCache;
+    }
+}
+
+function writeDownloadsStore(data) {
+    const filePath = downloadsFilePath();
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    downloadsCache = data;
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+}
+
+function scheduleDownloadsPersist() {
+    if (downloadsPersistTimer) return;
+    downloadsPersistTimer = setTimeout(() => {
+        downloadsPersistTimer = null;
+        if (downloadsCache) writeDownloadsStore(downloadsCache);
+    }, 750);
+}
+
+function flushDownloadsPersist() {
+    if (downloadsPersistTimer) {
+        clearTimeout(downloadsPersistTimer);
+        downloadsPersistTimer = null;
+    }
+    if (downloadsCache) writeDownloadsStore(downloadsCache);
+}
+
+function createDownloadId() {
+    return `dl_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function broadcastDownloads(channel, payload) {
+    BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) {
+            win.webContents.send(channel, payload);
+        }
+    });
+}
+
+function upsertDownloadRecord(record, options = {}) {
+    const persist = options.persist !== false;
+    const notify = options.notify !== false;
+    const data = readDownloadsStore();
+    const index = data.items.findIndex((item) => item.id === record.id);
+    if (index >= 0) data.items[index] = { ...data.items[index], ...record };
+    else data.items.unshift(record);
+    downloadsCache = data;
+    if (persist) writeDownloadsStore(data);
+    else scheduleDownloadsPersist();
+    if (notify) broadcastDownloads("downloads:changed", { data, item: record });
+    return data;
+}
+
+function getUniqueSavePath(targetPath) {
+    if (!fs.existsSync(targetPath)) return targetPath;
+    const ext = path.extname(targetPath);
+    const base = path.basename(targetPath, ext);
+    const dir = path.dirname(targetPath);
+    let i = 1;
+    let candidate = path.join(dir, `${base} (${i})${ext}`);
+    while (fs.existsSync(candidate)) {
+        i += 1;
+        candidate = path.join(dir, `${base} (${i})${ext}`);
+    }
+    return candidate;
+}
+
+function showDownloadNotification(title, body) {
+    try {
+        const settings = readSettingsStore();
+        if (!(settings.downloads && settings.downloads.showNotifications)) return;
+        if (!Notification.isSupported()) return;
+        const note = new Notification({ title, body, silent: false });
+        note.show();
+    } catch (error) {
+        console.error("[DOWNLOADS] Notification failed:", error);
+    }
+}
+
+function mapDoneState(state) {
+    if (state === "completed") return "completed";
+    if (state === "cancelled") return "cancelled";
+    if (state === "interrupted") return "interrupted";
+    return "failed";
+}
+
+function attachDownloadItemHandlers(id, item) {
+    activeDownloadItems.set(id, item);
+    downloadSpeedState.set(id, {
+        lastBytes: 0,
+        lastTime: Date.now(),
+        speed: 0
+    });
+
+    item.on("updated", (_event, state) => {
+        const received = item.getReceivedBytes();
+        const total = item.getTotalBytes();
+        const now = Date.now();
+        const speedInfo = downloadSpeedState.get(id) || {
+            lastBytes: received,
+            lastTime: now,
+            speed: 0
+        };
+
+        const elapsed = Math.max(1, now - speedInfo.lastTime);
+        if (elapsed >= 500) {
+            const delta = Math.max(0, received - speedInfo.lastBytes);
+            speedInfo.speed = Math.round((delta * 1000) / elapsed);
+            speedInfo.lastBytes = received;
+            speedInfo.lastTime = now;
+            downloadSpeedState.set(id, speedInfo);
+        }
+
+        const progress = total > 0 ? Math.min(100, Math.round((received / total) * 100)) : 0;
+        let status = "downloading";
+        if (state === "interrupted") status = item.isPaused() ? "paused" : "interrupted";
+        else if (item.isPaused()) status = "paused";
+
+        const patch = {
+            id,
+            downloadedBytes: received,
+            fileSize: total,
+            progress,
+            status,
+            speed: speedInfo.speed || 0
+        };
+
+        upsertDownloadRecord(patch, { persist: false, notify: false });
+        broadcastDownloads("downloads:progress", patch);
+    });
+
+    item.once("done", (_event, state) => {
+        activeDownloadItems.delete(id);
+        downloadSpeedState.delete(id);
+
+        const received = item.getReceivedBytes();
+        const total = item.getTotalBytes() || received;
+        const status = mapDoneState(state);
+        const savePath = item.getSavePath();
+        const patch = {
+            id,
+            status,
+            downloadedBytes: received,
+            fileSize: total,
+            progress: status === "completed" ? 100 : (total > 0 ? Math.round((received / total) * 100) : 0),
+            endTime: Date.now(),
+            targetPath: savePath,
+            fileName: path.basename(savePath || item.getFilename() || "download"),
+            speed: 0,
+            errorMessage: status === "completed" ? "" : (status === "cancelled" ? "Cancelled by user" : "Download failed")
+        };
+
+        flushDownloadsPersist();
+        upsertDownloadRecord(patch);
+
+        if (status === "completed") {
+            showDownloadNotification("Download complete", patch.fileName);
+            try {
+                const settings = readSettingsStore();
+                if (settings.downloads && settings.downloads.autoOpenDownloads && savePath) {
+                    shell.openPath(savePath);
+                }
+            } catch (e) {
+                /* ignore auto-open errors */
+            }
+        } else if (status === "failed" || status === "interrupted") {
+            showDownloadNotification("Download failed", patch.fileName);
+        }
+    });
+}
+
+function registerBrowserDownloadCapture() {
+    session.defaultSession.on("will-download", async (event, item, webContents) => {
+        try {
+            const settings = readSettingsStore();
+            const dl = settings.downloads || {};
+            const folder = (dl.defaultFolder && String(dl.defaultFolder).trim())
+                ? dl.defaultFolder
+                : app.getPath("downloads");
+
+            if (!fs.existsSync(folder)) {
+                fs.mkdirSync(folder, { recursive: true });
+            }
+
+            const suggested = item.getFilename() || "download";
+            const id = createDownloadId();
+            let sourcePage = "";
+            try {
+                sourcePage = webContents && !webContents.isDestroyed() ? (webContents.getURL() || "") : "";
+            } catch (e) {
+                sourcePage = "";
+            }
+
+            const record = {
+                id,
+                fileName: suggested,
+                url: item.getURL(),
+                targetPath: "",
+                fileSize: item.getTotalBytes() || 0,
+                downloadedBytes: 0,
+                progress: 0,
+                mimeType: item.getMimeType() || "",
+                startTime: Date.now(),
+                endTime: null,
+                status: "downloading",
+                sourcePage,
+                errorMessage: "",
+                speed: 0
+            };
+
+            if (dl.askBeforeDownload) {
+                item.pause();
+                const win = BrowserWindow.fromWebContents(webContents) || BrowserWindow.getFocusedWindow();
+                const { canceled, filePath } = await dialog.showSaveDialog(win, {
+                    title: "Save Download",
+                    defaultPath: path.join(folder, suggested)
+                });
+
+                if (canceled || !filePath) {
+                    item.cancel();
+                    record.status = "cancelled";
+                    record.endTime = Date.now();
+                    record.errorMessage = "Cancelled by user";
+                    upsertDownloadRecord(record);
+                    return;
+                }
+
+                item.setSavePath(filePath);
+                record.targetPath = filePath;
+                record.fileName = path.basename(filePath);
+                upsertDownloadRecord(record);
+                showDownloadNotification("Download started", record.fileName);
+                attachDownloadItemHandlers(id, item);
+                item.resume();
+                return;
+            }
+
+            const savePath = getUniqueSavePath(path.join(folder, suggested));
+            item.setSavePath(savePath);
+            record.targetPath = savePath;
+            record.fileName = path.basename(savePath);
+            upsertDownloadRecord(record);
+            showDownloadNotification("Download started", record.fileName);
+            attachDownloadItemHandlers(id, item);
+        } catch (error) {
+            console.error("[DOWNLOADS] will-download error:", error);
+            try { item.cancel(); } catch (e) { /* ignore */ }
+        }
+    });
+}
+
+ipcMain.handle("downloads:get", async () => {
+    try {
+        return { success: true, data: readDownloadsStore() };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("downloads:delete", async (event, payload) => {
+    try {
+        const ids = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload && payload.ids)
+              ? payload.ids
+              : payload && payload.id
+                ? [payload.id]
+                : [];
+        if (!ids.length) return { success: false, error: "No download ids provided." };
+
+        const idSet = new Set(ids.map(String));
+        const data = readDownloadsStore();
+        const before = data.items.length;
+        data.items = data.items.filter((item) => !idSet.has(String(item.id)));
+        writeDownloadsStore(data);
+        broadcastDownloads("downloads:changed", { data });
+        return { success: true, data, deletedCount: before - data.items.length };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("downloads:clear", async (event, scope) => {
+    try {
+        const data = readDownloadsStore();
+        const before = data.items.length;
+        if (scope === "completed") {
+            data.items = data.items.filter((item) => item.status !== "completed");
+        } else {
+            data.items = [];
+        }
+        writeDownloadsStore(data);
+        broadcastDownloads("downloads:changed", { data });
+        return { success: true, data, deletedCount: before - data.items.length };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("downloads:cancel", async (event, id) => {
+    try {
+        const item = activeDownloadItems.get(id);
+        if (!item) return { success: false, error: "Active download not found." };
+        item.cancel();
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("downloads:pause", async (event, id) => {
+    try {
+        const item = activeDownloadItems.get(id);
+        if (!item) return { success: false, error: "Active download not found." };
+        if (typeof item.pause === "function") item.pause();
+        upsertDownloadRecord({ id, status: "paused" });
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("downloads:resume", async (event, id) => {
+    try {
+        const item = activeDownloadItems.get(id);
+        if (!item) return { success: false, error: "Active download not found." };
+        if (typeof item.resume === "function") item.resume();
+        upsertDownloadRecord({ id, status: "downloading" });
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("downloads:retry", async (event, id) => {
+    try {
+        const data = readDownloadsStore();
+        const record = data.items.find((item) => item.id === id);
+        if (!record || !record.url) {
+            return { success: false, error: "Download record not found." };
+        }
+        session.defaultSession.downloadURL(record.url);
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("downloads:open-file", async (event, id) => {
+    try {
+        const data = readDownloadsStore();
+        const record = data.items.find((item) => item.id === id);
+        if (!record || !record.targetPath) {
+            return { success: false, error: "File path not available." };
+        }
+        if (!fs.existsSync(record.targetPath)) {
+            return { success: false, error: "File no longer exists." };
+        }
+        const result = await shell.openPath(record.targetPath);
+        if (result) return { success: false, error: result };
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("downloads:show-in-folder", async (event, id) => {
+    try {
+        const data = readDownloadsStore();
+        const record = data.items.find((item) => item.id === id);
+        if (!record || !record.targetPath) {
+            return { success: false, error: "File path not available." };
+        }
+        if (!fs.existsSync(record.targetPath)) {
+            return { success: false, error: "File no longer exists." };
+        }
+        shell.showItemInFolder(record.targetPath);
+        return { success: true };
     } catch (error) {
         return { success: false, error: error.message };
     }

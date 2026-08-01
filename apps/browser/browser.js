@@ -180,6 +180,9 @@ window.onload = async function(){
     if (window.History) {
         History.init();
     }
+    if (window.Downloads) {
+        Downloads.init();
+    }
 }
 document.addEventListener("DOMContentLoaded", () => {
     if (window.BrowserTab) {

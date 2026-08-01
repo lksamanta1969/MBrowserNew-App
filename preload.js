@@ -93,6 +93,45 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke("settings:get-about"),
 
     settingsClearPrivacy: (target) =>
-      ipcRenderer.invoke("settings:clear-privacy", target)
+      ipcRenderer.invoke("settings:clear-privacy", target),
+
+    downloadsGet: () =>
+      ipcRenderer.invoke("downloads:get"),
+
+    downloadsDelete: (payload) =>
+      ipcRenderer.invoke("downloads:delete", payload),
+
+    downloadsClear: (scope) =>
+      ipcRenderer.invoke("downloads:clear", scope),
+
+    downloadsCancel: (id) =>
+      ipcRenderer.invoke("downloads:cancel", id),
+
+    downloadsPause: (id) =>
+      ipcRenderer.invoke("downloads:pause", id),
+
+    downloadsResume: (id) =>
+      ipcRenderer.invoke("downloads:resume", id),
+
+    downloadsRetry: (id) =>
+      ipcRenderer.invoke("downloads:retry", id),
+
+    downloadsOpenFile: (id) =>
+      ipcRenderer.invoke("downloads:open-file", id),
+
+    downloadsShowInFolder: (id) =>
+      ipcRenderer.invoke("downloads:show-in-folder", id),
+
+    onDownloadsChanged: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("downloads:changed", listener);
+      return () => ipcRenderer.removeListener("downloads:changed", listener);
+    },
+
+    onDownloadsProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("downloads:progress", listener);
+      return () => ipcRenderer.removeListener("downloads:progress", listener);
+    }
   }
 );

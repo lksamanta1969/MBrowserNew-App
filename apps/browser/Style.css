@@ -929,3 +929,195 @@ body[data-theme="dark"] .settings-manager-main h3{ color: #fde68a; }
     .settings-row-control input[type="number"],
     .settings-row-control select{ width: 100%; }
 }
+
+/* ===== Downloads ===== */
+#downloadsManagerBtn{
+    background: #fafafa;
+    font-size: 18px;
+    min-width: 44px;
+}
+.dl-manager{
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1000000;
+    align-items: stretch;
+    justify-content: center;
+    padding: 28px;
+}
+.dl-manager.open{ display: flex; }
+.dl-manager-panel{
+    width: min(1100px, 100%);
+    background: var(--mb-surface, #fff);
+    color: var(--mb-text, #1f2937);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.dl-manager-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--mb-accent, #b45309);
+    color: white;
+}
+.dl-manager-header h2{ margin: 0; font-size: 20px; }
+.dl-manager-toolbar{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--mb-border, #e5e7eb);
+    background: var(--mb-toolbar, #fff7ed);
+}
+.dl-manager-toolbar input[type="search"]{
+    flex: 1;
+    min-width: 180px;
+    height: 36px;
+    border: 1px solid var(--mb-border, #e5e7eb);
+    border-radius: 8px;
+    padding: 0 12px;
+    background: var(--mb-surface, #fff);
+    color: var(--mb-text, #1f2937);
+}
+.dl-manager-toolbar button{
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    padding: 0 12px;
+    background: #92400e;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+.dl-manager-toolbar button.danger{ background: #b91c1c; }
+.dl-manager-body{
+    display: flex;
+    min-height: 420px;
+    max-height: calc(100vh - 180px);
+}
+.dl-manager-sidebar{
+    width: 200px;
+    border-right: 1px solid var(--mb-border, #e5e7eb);
+    overflow: auto;
+    background: var(--mb-surface-2, #fafafa);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.dl-filter-btn{
+    border: none;
+    background: transparent;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--mb-text, #374151);
+    font-weight: 600;
+}
+.dl-filter-btn:hover{ background: rgba(180,83,9,0.08); }
+.dl-filter-btn.active{
+    background: var(--mb-active, #fde68a);
+    color: #92400e;
+}
+.dl-manager-main{
+    flex: 1;
+    overflow: auto;
+    padding: 12px 16px 16px;
+}
+.dl-manager-main h3{
+    margin: 0 0 10px;
+    color: #78350f;
+    font-size: 16px;
+}
+.dl-list-empty{
+    color: var(--mb-muted, #6b7280);
+    padding: 24px 8px;
+    text-align: center;
+}
+.dl-row{
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    border: 1px solid var(--mb-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: var(--mb-surface-2, #fafafa);
+}
+.dl-row-main{ flex: 1; min-width: 0; }
+.dl-file-name{
+    font-weight: 700;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.dl-file-url{
+    font-size: 12px;
+    color: var(--mb-muted, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 2px 0 8px;
+}
+.dl-progress-track{
+    height: 8px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+}
+.dl-progress-bar{
+    height: 100%;
+    background: linear-gradient(90deg, #b45309, #d97706);
+    border-radius: 999px;
+    transition: width 0.2s ease;
+}
+.dl-file-meta{
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #92400e;
+}
+.dl-error{
+    margin-top: 6px;
+    font-size: 12px;
+    color: #b91c1c;
+}
+.dl-actions{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.dl-actions button{
+    border: none;
+    border-radius: 8px;
+    padding: 7px 10px;
+    background: #e5e7eb;
+    color: #374151;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+}
+.dl-actions button.primary{
+    background: #b45309;
+    color: white;
+}
+.dl-actions button.danger{
+    background: #fee2e2;
+    color: #b91c1c;
+}
+.dl-row.status-completed .dl-progress-bar{ background: #16a34a; }
+.dl-row.status-failed .dl-progress-bar,
+.dl-row.status-interrupted .dl-progress-bar{ background: #dc2626; }
+.dl-row.status-cancelled .dl-progress-bar{ background: #6b7280; }
+.dl-row.status-paused .dl-progress-bar{ background: #ca8a04; }

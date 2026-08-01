@@ -440,7 +440,10 @@ const Settings = (function () {
       fieldRow(
         "Show download notifications",
         `<label class="settings-switch"><input id="setDownloadNotify" type="checkbox"${get("downloads.showNotifications", true) ? " checked" : ""}><span></span></label>`
-      )
+      ) +
+      `<div class="settings-actions">
+        <button type="button" id="setOpenDownloadsManager">Open Download Manager</button>
+      </div>`
     );
   }
 
@@ -625,6 +628,13 @@ const Settings = (function () {
           } else if (result && !result.success) {
             alert(result.error || "Could not update download folder.");
           }
+        });
+      }
+      const openDl = document.getElementById("setOpenDownloadsManager");
+      if (openDl) {
+        openDl.addEventListener("click", () => {
+          closeManager();
+          if (window.Downloads) Downloads.openManager();
         });
       }
     }
