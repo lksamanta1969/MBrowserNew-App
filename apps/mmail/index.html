@@ -3,6 +3,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <title>MMail Pro</title>
 <style>
 *{ box-sizing: border-box; transition: background-color 0.3s, color 0.3s; }
@@ -14,7 +16,7 @@ body.dark hr { border-color: #444; }
 body.dark input, body.dark textarea { background: #1e1e2d; color: white; border-color: #555; }
 
 .container{ display:flex; gap:20px; align-items: flex-start; }
-.sidebar{ width:240px; background:white; padding:20px; border-radius:15px; box-shadow:0 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+.sidebar{ width:260px; background:white; padding:20px; border-radius:15px; box-shadow:0 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; max-height: calc(100vh - 40px); overflow-y: auto; }
 .main{ flex:1; background:white; padding:20px; border-radius:15px; box-shadow:0 0 10px rgba(0,0,0,0.1); min-height: 550px; }
 
 /* Auth Buttons */
@@ -30,7 +32,78 @@ button{ padding:10px 15px; border:none; border-radius:8px; cursor:pointer; margi
 .menu{ margin-top:10px; }
 .menu p{ padding:10px; cursor:pointer; margin:4px 0; border-radius:8px; }
 .menu p:hover{ background:#f2f2f2; font-weight: bold; }
+.menu p.active{ background:#fff7ed; color:#b45309; font-weight:bold; }
+.level-row.active { background:#fff7ed; color:#b45309; font-weight:bold; border-radius:8px; }
+body.dark .level-row.active { background:#3d2f1f; color:#fdba74; }
+body.dark .menu p:hover { background: #3d3d5c; }
+body.dark .menu p.active { background:#3d2f1f; color:#fdba74; }
+body.dark .menu-section { color:#9ca3af; }
+body.dark .menu-sub .count { color:#9ca3af; }
+body.dark .menu-sub { border-left-color:#92400e; }
+body.dark .bulk-toolbar select { background:#1e1e2d; color:#fff; border-color:#555; }
+.menu-section { padding:8px 10px 4px; font-size:11px; font-weight:bold; text-transform:uppercase; color:#6b7280; letter-spacing:0.04em; margin-top:8px; cursor:default; }
+.menu-section:first-of-type { margin-top:4px; }
+.menu-section:hover { background:transparent !important; font-weight:bold !important; }
+.menu-sub { margin-left:8px; border-left:2px solid #fdba74; padding-left:4px; margin-bottom:4px; }
+.menu-sub p { padding:7px 10px; font-size:13px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.menu-sub .count { font-size:12px; color:#6b7280; font-weight:normal; min-width:20px; text-align:right; }
+.menu-all-inbox { font-weight:bold; margin-bottom:2px; }
+.menu-toggle { display:flex; justify-content:space-between; align-items:center; }
+.menu-toggle .chevron { font-size:11px; color:#6b7280; }
+.menu-sub.collapsed { display:none; }
+.bulk-toolbar button.category-btn { background:#2563eb; color:#fff; }
 .mail-card { background: #fafafa; padding:15px; margin-bottom:12px; border-radius:8px; border-left:4px solid #b45309; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+.trash-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.trash-actions button { margin:0; padding:6px 12px; font-size:13px; }
+.trash-toolbar { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+.trash-toolbar button.danger { background:#b91c1c; color:#fff; }
+.mail-list-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:12px; padding:8px 0; }
+.mail-list-toolbar label { display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:bold; font-size:14px; }
+.bulk-toolbar { display:none; align-items:center; gap:12px; margin-bottom:16px; padding:10px 14px; background:#fff7ed; border:1px solid #fdba74; border-radius:8px; flex-wrap:wrap; }
+body.dark .bulk-toolbar { background:#3d2f1f; border-color:#92400e; }
+.bulk-toolbar.visible { display:flex; }
+.bulk-toolbar .selected-count { font-weight:bold; color:#b45309; min-width:90px; }
+.bulk-toolbar button { margin:0; padding:8px 14px; font-size:13px; }
+.bulk-toolbar button.delete-btn { background:#ef4444; color:#fff; }
+.bulk-toolbar select { padding:8px 10px; border-radius:8px; border:1px solid #ccc; font-size:13px; }
+.bulk-toolbar button.move-btn { background:#b45309; color:#fff; }
+.move-toast { display:none; margin-bottom:14px; padding:12px 14px; background:#ecfdf5; border:1px solid #6ee7b7; border-radius:8px; color:#065f46; }
+.move-toast.visible { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+body.dark .move-toast { background:#1a2e22; border-color:#065f46; color:#a7f3d0; }
+.move-toast button { margin:0; padding:6px 12px; font-size:13px; background:#b45309; color:#fff; }
+.sync-status { font-size:13px; color:#6b7280; margin-bottom:10px; }
+body.dark .sync-status { color:#9ca3af; }
+.sync-settings { max-width:620px; }
+.sync-settings .hint { color:#6b7280; margin-bottom:16px; }
+.sync-category-list { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin:16px 0; }
+.sync-category-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid #e5e7eb; border-radius:8px; background:#fafafa; }
+.sync-category-item input { width:18px; height:18px; cursor:pointer; }
+.sync-save-btn { background:#2563eb; color:#fff; }
+body.dark .sync-settings .hint { color:#9ca3af; }
+body.dark .sync-category-item { background:#1e1e2d; border-color:#444; }
+.move-dest-list { display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; margin:8px 0 12px; }
+.move-dest-item { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb; cursor:pointer; }
+.move-dest-item:hover { background:#fff7ed; }
+.move-dest-item input { margin:0; }
+body.dark .move-dest-item { border-color:#444; }
+body.dark .move-dest-item:hover { background:#3d2f1f; }
+.move-section-label { font-size:11px; font-weight:bold; text-transform:uppercase; color:#6b7280; margin:10px 0 6px; letter-spacing:0.04em; }
+.move-new-level { color:#b45309; font-weight:bold; cursor:pointer; padding:8px 10px; border-radius:8px; border:1px dashed #fdba74; text-align:center; margin-top:6px; }
+.move-new-level:hover { background:#fff7ed; }
+body.dark .move-new-level:hover { background:#3d2f1f; }
+.level-row { display:flex; align-items:center; gap:6px; padding:7px 10px !important; }
+.level-row .level-name { flex:1; cursor:pointer; }
+.level-row .level-menu-btn { background:none; border:none; padding:2px 6px; margin:0; font-size:16px; line-height:1; color:#6b7280; cursor:pointer; }
+.level-row .level-menu-btn:hover { color:#b45309; background:transparent; }
+.level-menu-popup { position:fixed; z-index:10001; background:white; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12); min-width:140px; display:none; }
+body.dark .level-menu-popup { background:#2b2b3d; border-color:#444; }
+.level-menu-popup button { display:block; width:100%; text-align:left; padding:10px 14px; margin:0; border:none; background:none; font-size:14px; cursor:pointer; }
+.level-menu-popup button:hover { background:#fff7ed; }
+body.dark .level-menu-popup button:hover { background:#3d2f1f; }
+.level-menu-popup button.danger { color:#b91c1c; }
+.mail-card-row { display:flex; gap:12px; align-items:flex-start; }
+.mail-card-row input[type="checkbox"] { margin-top:4px; width:16px; height:16px; cursor:pointer; flex-shrink:0; }
+.mail-card-body { flex:1; min-width:0; }
 
 /* Popup Module */
 .popup{ display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999; }
@@ -65,6 +138,45 @@ button{ padding:10px 15px; border:none; border-radius:8px; cursor:pointer; margi
     </div>
 </div>
 
+<div id="movePopup" class="popup">
+    <div class="popup-box" style="width:400px;">
+        <h2 style="margin:0; color:#b45309; text-align:center;">Move Messages</h2>
+        <p id="movePopupHint" style="margin:0; font-size:14px; color:#6b7280; text-align:center;">Choose a destination</p>
+        <div class="move-section-label">Level</div>
+        <div id="moveLevelList" class="move-dest-list"></div>
+        <div id="moveNewLevelBtn" class="move-new-level">＋ New Level</div>
+        <div class="move-section-label">Other</div>
+        <div id="moveOtherList" class="move-dest-list"></div>
+        <button id="moveConfirmBtn" onclick="confirmMoveSelected()">Move here</button>
+        <button onclick="closeMovePopup()" style="background:#6b7280;">Cancel</button>
+    </div>
+</div>
+
+<div id="createLevelPopup" class="popup">
+    <div class="popup-box" style="width:360px;">
+        <h2 style="margin:0; color:#b45309; text-align:center;">Create Level</h2>
+        <label style="font-size:14px; font-weight:bold;">Level Name:</label>
+        <input type="text" id="newLevelNameInput" placeholder="e.g. Project ABC">
+        <button onclick="saveNewLevel()">Save</button>
+        <button onclick="closeCreateLevelPopup()" style="background:#6b7280;">Cancel</button>
+    </div>
+</div>
+
+<div id="renameLevelPopup" class="popup">
+    <div class="popup-box" style="width:360px;">
+        <h2 style="margin:0; color:#b45309; text-align:center;">Rename Level</h2>
+        <label style="font-size:14px; font-weight:bold;">Level Name:</label>
+        <input type="text" id="renameLevelNameInput" placeholder="Level name">
+        <button onclick="saveRenameLevel()">Save</button>
+        <button onclick="closeRenameLevelPopup()" style="background:#6b7280;">Cancel</button>
+    </div>
+</div>
+
+<div id="levelMenuPopup" class="level-menu-popup">
+    <button onclick="openRenameLevelFromMenu()">Rename</button>
+    <button class="danger" onclick="confirmDeleteLevel()">Delete</button>
+</div>
+
 <div class="container">
     <div class="sidebar">
         <h2 style="margin-top: 0; color:#b45309;">📧 MMail Core</h2>
@@ -76,12 +188,42 @@ button{ padding:10px 15px; border:none; border-radius:8px; cursor:pointer; margi
 
         <button class="compose" onclick="openCompose()">✉ Compose</button>
         
-        <div class="menu">
-            <p onclick="loadInbox()">📥 Inbox</p>
-            <p onclick="loadSent()">📤 Sent</p>
-            <p onclick="loadDrafts()">📝 Drafts</p>
+        <div class="menu" id="sidebarMenu">
+            <p class="menu-section">Inbox</p>
+            <p id="navInbox" class="menu-all-inbox" onclick="loadInbox()"><span>📥 All Inbox</span><span class="count" id="countInboxAll"></span></p>
+            <p id="navSyncSettings" onclick="loadGmailSyncSettings()">⚙ Gmail Sync</p>
+            <div id="inboxCategories" class="menu-sub">
+                <p id="navPrimary" onclick="loadInboxCategory('primary')"><span>Primary</span><span class="count" id="countPrimary"></span></p>
+                <p id="navSocial" onclick="loadInboxCategory('social')"><span>Social</span><span class="count" id="countSocial"></span></p>
+                <p id="navPromotions" onclick="loadInboxCategory('promotions')"><span>Promotions</span><span class="count" id="countPromotions"></span></p>
+                <p id="navUpdates" onclick="loadInboxCategory('updates')"><span>Updates</span><span class="count" id="countUpdates"></span></p>
+                <p id="navForums" onclick="loadInboxCategory('forums')"><span>Forums</span><span class="count" id="countForums"></span></p>
+                <p id="navShopping" onclick="loadInboxCategory('shopping')"><span>Shopping</span><span class="count" id="countShopping"></span></p>
+                <p id="navFinanceCat" onclick="loadInboxCategory('finance')"><span>Finance</span><span class="count" id="countFinanceCat"></span></p>
+                <p id="navTravelCat" onclick="loadInboxCategory('travel')"><span>Travel</span><span class="count" id="countTravelCat"></span></p>
+                <p id="navWork" onclick="loadInboxCategory('work')"><span>Work</span><span class="count" id="countWork"></span></p>
+                <p id="navPersonal" onclick="loadInboxCategory('personal')"><span>Personal</span><span class="count" id="countPersonal"></span></p>
+            </div>
+            <p class="menu-section">Smart Views</p>
+            <div id="smartViews" class="menu-sub">
+                <p id="navUnread" onclick="loadSmartView('unread')"><span>Unread</span><span class="count" id="countUnread"></span></p>
+                <p id="navStarred" onclick="loadSmartView('starred')"><span>Starred</span><span class="count" id="countStarred"></span></p>
+                <p id="navImportant" onclick="loadSmartView('important')"><span>Important</span><span class="count" id="countImportant"></span></p>
+                <p id="navAttachments" onclick="loadSmartView('attachments')"><span>Attachments</span><span class="count" id="countAttachments"></span></p>
+                <p id="navReceipts" onclick="loadSmartView('receipt')"><span>Receipts</span><span class="count" id="countReceipt"></span></p>
+                <p id="navBills" onclick="loadSmartView('bills')"><span>Bills &amp; Payments</span><span class="count" id="countBills"></span></p>
+                <p id="navNotifications" onclick="loadSmartView('notification')"><span>Notifications</span><span class="count" id="countNotification"></span></p>
+                <p id="navSubscriptions" onclick="loadSmartView('subscription')"><span>Subscriptions</span><span class="count" id="countSubscription"></span></p>
+                <p id="navArchive" onclick="loadSmartView('archived')"><span>Archive</span><span class="count" id="countArchive"></span></p>
+            </div>
+            <p class="menu-section">Levels</p>
+            <div id="levelsSidebar" class="menu-sub"></div>
+            <p class="menu-section">Mailboxes</p>
+            <p id="navSent" onclick="loadSent()">📤 Sent</p>
+            <p id="navDrafts" onclick="loadDrafts()">📝 Drafts</p>
+            <p id="navTrash" onclick="loadTrash()">🗑 Trash</p>
             <p onclick="toggleDarkMode()">🌙 Dark Mode</p>
-        </div> 
+        </div>
     </div>
     
     <div class="main" id="content">
@@ -93,6 +235,845 @@ button{ padding:10px 15px; border:none; border-radius:8px; cursor:pointer; margi
 <script>
 
 let editingDraftIndex = -1;
+let currentMailboxView = "home";
+let selectedMessageIds = new Set();
+let visibleMessageIds = [];
+let bulkToolbarEl = null;
+let selectAllCheckboxEl = null;
+
+const CATEGORY_LABELS = {
+    primary: "Primary",
+    social: "Social",
+    promotions: "Promotions",
+    updates: "Updates",
+    forums: "Forums",
+    shopping: "Shopping",
+    finance: "Finance",
+    travel: "Travel",
+    work: "Work",
+    personal: "Personal"
+};
+
+const SMART_VIEW_LABELS = {
+    unread: "Unread",
+    starred: "Starred",
+    important: "Important",
+    attachments: "Attachments",
+    receipt: "Receipts",
+    bills: "Bills & Payments",
+    notification: "Notifications",
+    subscription: "Subscriptions",
+    archived: "Archive"
+};
+
+const CATEGORY_NAV_MAP = {
+    primary: "navPrimary",
+    social: "navSocial",
+    promotions: "navPromotions",
+    updates: "navUpdates",
+    forums: "navForums",
+    shopping: "navShopping",
+    finance: "navFinanceCat",
+    travel: "navTravelCat",
+    work: "navWork",
+    personal: "navPersonal"
+};
+
+const SMART_NAV_MAP = {
+    unread: "navUnread",
+    starred: "navStarred",
+    important: "navImportant",
+    attachments: "navAttachments",
+    receipt: "navReceipts",
+    bills: "navBills",
+    notification: "navNotifications",
+    subscription: "navSubscriptions",
+    archived: "navArchive"
+};
+
+function setActiveNav(navId) {
+    document.querySelectorAll("#sidebarMenu p[id^='nav'], #sidebarMenu .level-row[id^='navLevel_']").forEach((el) => el.classList.remove("active"));
+    if (navId) {
+        const node = document.getElementById(navId);
+        if (node) node.classList.add("active");
+    }
+}
+
+async function refreshSidebarCounts() {
+    try {
+        const response = await fetch("http://localhost:3000/mmail/inbox/meta");
+        if (!response.ok) return;
+        const meta = await response.json();
+        const setCount = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = String(value == null ? 0 : value);
+        };
+        setCount("countInboxAll", meta.inboxTotal);
+        const cats = meta.categories || {};
+        setCount("countPrimary", cats.primary);
+        setCount("countSocial", cats.social);
+        setCount("countPromotions", cats.promotions);
+        setCount("countUpdates", cats.updates);
+        setCount("countForums", cats.forums);
+        setCount("countShopping", cats.shopping);
+        setCount("countFinanceCat", cats.finance);
+        setCount("countTravelCat", cats.travel);
+        setCount("countWork", cats.work);
+        setCount("countPersonal", cats.personal);
+        const views = meta.smartViews || {};
+        setCount("countUnread", views.unread);
+        setCount("countStarred", views.starred);
+        setCount("countImportant", views.important);
+        setCount("countAttachments", views.attachments);
+        setCount("countReceipt", views.receipt);
+        setCount("countBills", views.bills);
+        setCount("countNotification", views.notification);
+        setCount("countSubscription", views.subscription);
+        setCount("countArchive", meta.archived);
+        if (meta.levels) renderLevelsSidebar(meta.levels);
+    } catch (e) {
+        console.error("[MMail] Could not refresh sidebar counts");
+    }
+}
+
+async function reloadCurrentView() {
+    if (currentMailboxView === "inbox") return loadInbox();
+    if (currentMailboxView.startsWith("inbox:")) return loadInboxCategory(currentMailboxView.split(":")[1]);
+    if (currentMailboxView.startsWith("smart:")) return loadSmartView(currentMailboxView.split(":")[1]);
+    if (currentMailboxView.startsWith("level:")) return loadLevel(currentMailboxView.split(":")[1]);
+    if (currentMailboxView === "sent") return loadSent();
+    if (currentMailboxView === "drafts") return loadDrafts();
+    if (currentMailboxView === "trash") return loadTrash();
+}
+
+async function loadGmailSyncSettings() {
+    currentMailboxView = "sync-settings";
+    setActiveNav("navSyncSettings");
+    const content = document.getElementById("content");
+    content.innerHTML = "<h1>⚙ Gmail Sync</h1><hr><p class=\"sync-status\">Loading sync categories…</p>";
+    try {
+        const response = await fetch("http://localhost:3000/mmail/sync-settings");
+        const payload = await response.json();
+        if (!response.ok || !payload.success) throw new Error("Could not load sync settings.");
+
+        const categories = payload.categories || {};
+        const card = document.createElement("div");
+        card.className = "sync-settings";
+        const hint = document.createElement("p");
+        hint.className = "hint";
+        hint.textContent = "Choose which Gmail categories MMail should sync. Primary is enabled by default. Each sync fetches at most 50 recent messages.";
+        card.appendChild(hint);
+
+        const list = document.createElement("div");
+        list.className = "sync-category-list";
+        Object.keys(CATEGORY_LABELS).forEach((category) => {
+            const label = document.createElement("label");
+            label.className = "sync-category-item";
+            const text = document.createElement("span");
+            text.textContent = CATEGORY_LABELS[category];
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.dataset.category = category;
+            checkbox.checked = !!categories[category];
+            label.appendChild(text);
+            label.appendChild(checkbox);
+            list.appendChild(label);
+        });
+        card.appendChild(list);
+
+        const saveButton = document.createElement("button");
+        saveButton.className = "sync-save-btn";
+        saveButton.textContent = "Save Sync Categories";
+        saveButton.addEventListener("click", async () => {
+            try {
+                const nextCategories = {};
+                card.querySelectorAll("input[data-category]").forEach((checkbox) => {
+                    nextCategories[checkbox.dataset.category] = checkbox.checked;
+                });
+                const saveResponse = await fetch("http://localhost:3000/mmail/sync-settings", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ categories: nextCategories })
+                });
+                const saved = await saveResponse.json();
+                if (!saveResponse.ok || !saved.success) throw new Error("Could not save sync settings.");
+                alert("Gmail sync categories saved.");
+            } catch (error) {
+                alert("Could not save Gmail sync categories.");
+            }
+        });
+        card.appendChild(saveButton);
+
+        content.innerHTML = "<h1>⚙ Gmail Sync</h1><hr>";
+        content.appendChild(card);
+    } catch (error) {
+        content.innerHTML = "<h3>❌ Could not load Gmail sync settings.</h3>";
+    }
+}
+
+function clearSelection() {
+    selectedMessageIds.clear();
+    updateBulkToolbar();
+    updateSelectAllCheckbox();
+}
+
+function pruneSelectionToVisible() {
+    Array.from(selectedMessageIds).forEach((id) => {
+        if (!visibleMessageIds.includes(id)) {
+            selectedMessageIds.delete(id);
+        }
+    });
+    updateBulkToolbar();
+    updateSelectAllCheckbox();
+}
+
+function syncVisibleMessageIds(ids) {
+    visibleMessageIds = ids.filter(Boolean);
+    pruneSelectionToVisible();
+}
+
+function toggleMessageSelection(id, checked) {
+    if (!id) return;
+    if (checked) selectedMessageIds.add(id);
+    else selectedMessageIds.delete(id);
+    updateBulkToolbar();
+    updateSelectAllCheckbox();
+}
+
+function setSelectAllVisible(checked) {
+    if (checked) {
+        visibleMessageIds.forEach((id) => selectedMessageIds.add(id));
+    } else {
+        visibleMessageIds.forEach((id) => selectedMessageIds.delete(id));
+    }
+    document.querySelectorAll(".mail-select-checkbox").forEach((box) => {
+        if (visibleMessageIds.includes(box.dataset.messageId)) {
+            box.checked = checked;
+        }
+    });
+    updateBulkToolbar();
+    updateSelectAllCheckbox();
+}
+
+function updateSelectAllCheckbox() {
+    if (!selectAllCheckboxEl) return;
+    const visibleSelected = visibleMessageIds.filter((id) => selectedMessageIds.has(id));
+    if (!visibleMessageIds.length) {
+        selectAllCheckboxEl.checked = false;
+        selectAllCheckboxEl.indeterminate = false;
+        return;
+    }
+    selectAllCheckboxEl.checked = visibleSelected.length === visibleMessageIds.length;
+    selectAllCheckboxEl.indeterminate = visibleSelected.length > 0 && visibleSelected.length < visibleMessageIds.length;
+}
+
+function updateBulkToolbar() {
+    if (!bulkToolbarEl) return;
+    const count = selectedMessageIds.size;
+    const countEl = bulkToolbarEl.querySelector(".selected-count");
+    if (countEl) {
+        countEl.textContent = count === 1 ? "1 selected" : count + " selected";
+    }
+    bulkToolbarEl.classList.toggle("visible", count > 0);
+}
+
+let moveDestinationValue = "";
+let moveToastTimer = null;
+let cachedLevels = [];
+let levelMenuTargetId = "";
+let renameLevelTargetId = "";
+let pendingMoveAfterCreate = false;
+
+function isInboxContextView() {
+    return currentMailboxView === "inbox" || currentMailboxView.startsWith("inbox:") || currentMailboxView.startsWith("smart:") || currentMailboxView.startsWith("level:");
+}
+
+async function fetchLevels() {
+    try {
+        const response = await fetch("http://localhost:3000/mmail/levels");
+        if (!response.ok) return [];
+        const payload = await response.json();
+        cachedLevels = (payload && payload.levels) || [];
+        return cachedLevels;
+    } catch (e) {
+        return cachedLevels;
+    }
+}
+
+function renderLevelsSidebar(levels) {
+    const container = document.getElementById("levelsSidebar");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!levels.length) {
+        const empty = document.createElement("p");
+        empty.style.fontSize = "12px";
+        empty.style.color = "#6b7280";
+        empty.style.padding = "7px 10px";
+        empty.textContent = "No levels yet";
+        container.appendChild(empty);
+        return;
+    }
+    levels.forEach((level) => {
+        const row = document.createElement("div");
+        row.className = "level-row";
+        row.id = "navLevel_" + level.id;
+
+        const name = document.createElement("span");
+        name.className = "level-name";
+        name.textContent = "📁 " + level.name;
+        name.addEventListener("click", () => loadLevel(level.id));
+
+        const count = document.createElement("span");
+        count.className = "count";
+        count.textContent = String(level.count || 0);
+
+        const menuBtn = document.createElement("button");
+        menuBtn.className = "level-menu-btn";
+        menuBtn.textContent = "⋮";
+        menuBtn.title = "Level options";
+        menuBtn.addEventListener("click", (event) => openLevelMenu(event, level.id));
+
+        row.appendChild(name);
+        row.appendChild(count);
+        row.appendChild(menuBtn);
+        container.appendChild(row);
+    });
+}
+
+async function refreshLevelsSidebar() {
+    const levels = await fetchLevels();
+    renderLevelsSidebar(levels);
+}
+
+function openLevelMenu(event, levelId) {
+    event.stopPropagation();
+    levelMenuTargetId = levelId;
+    const menu = document.getElementById("levelMenuPopup");
+    menu.style.display = "block";
+    menu.style.left = event.clientX + "px";
+    menu.style.top = event.clientY + "px";
+}
+
+function closeLevelMenu() {
+    document.getElementById("levelMenuPopup").style.display = "none";
+    levelMenuTargetId = "";
+}
+
+document.addEventListener("click", () => closeLevelMenu());
+
+function openRenameLevelFromMenu() {
+    const level = cachedLevels.find((item) => item.id === levelMenuTargetId);
+    closeLevelMenu();
+    if (!level) return;
+    renameLevelTargetId = level.id;
+    document.getElementById("renameLevelNameInput").value = level.name;
+    document.getElementById("renameLevelPopup").style.display = "flex";
+}
+
+function closeRenameLevelPopup() {
+    document.getElementById("renameLevelPopup").style.display = "none";
+    renameLevelTargetId = "";
+}
+
+async function saveRenameLevel() {
+    const name = document.getElementById("renameLevelNameInput").value.trim();
+    if (!name || !renameLevelTargetId) return;
+    const result = await postMailAction("rename_level", [], { levelId: renameLevelTargetId, name });
+    if (!result || !result.success) {
+        alert((result && result.error) || "Could not rename level.");
+        return;
+    }
+    closeRenameLevelPopup();
+    await refreshLevelsSidebar();
+    await refreshSidebarCounts();
+    if (currentMailboxView === "level:" + renameLevelTargetId) {
+        await loadLevel(renameLevelTargetId);
+    }
+}
+
+async function confirmDeleteLevel() {
+    const level = cachedLevels.find((item) => item.id === levelMenuTargetId);
+    closeLevelMenu();
+    if (!level) return;
+    const message = 'Delete level "' + level.name + '"?\n\nMails in this level will return to Inbox. No mail will be deleted.';
+    if (!confirm(message)) return;
+    const result = await postMailAction("delete_level", [], { levelId: level.id });
+    if (!result || !result.success) {
+        alert((result && result.error) || "Could not delete level.");
+        return;
+    }
+    if (currentMailboxView === "level:" + level.id) await loadInbox();
+    await refreshLevelsSidebar();
+    await refreshSidebarCounts();
+}
+
+function getLevelById(levelId) {
+    return cachedLevels.find((item) => item.id === levelId);
+}
+
+function getMoveDestinationLabel(value) {
+    if (value === "inbox") return "Inbox";
+    if (value === "archive") return "Archive";
+    if (value === "trash") return "Trash";
+    const level = getLevelById(value);
+    if (level) return level.name;
+    return value;
+}
+
+function appendMoveOption(container, value, label, checked) {
+    const row = document.createElement("label");
+    row.className = "move-dest-item";
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = "moveDestination";
+    radio.value = value;
+    radio.checked = checked;
+    if (checked) moveDestinationValue = value;
+    radio.addEventListener("change", () => {
+        if (radio.checked) moveDestinationValue = value;
+    });
+    const text = document.createElement("span");
+    text.textContent = label;
+    row.appendChild(radio);
+    row.appendChild(text);
+    container.appendChild(row);
+}
+
+async function openMovePopup() {
+    const ids = Array.from(selectedMessageIds);
+    if (!ids.length) return;
+
+    await fetchLevels();
+    moveDestinationValue = "";
+    const hint = document.getElementById("movePopupHint");
+    hint.textContent = ids.length === 1 ? "Move 1 message to:" : "Move " + ids.length + " messages to:";
+
+    const levelList = document.getElementById("moveLevelList");
+    const otherList = document.getElementById("moveOtherList");
+    levelList.innerHTML = "";
+    otherList.innerHTML = "";
+
+    let first = true;
+    cachedLevels.forEach((level) => {
+        appendMoveOption(levelList, level.id, "📁 " + level.name, first);
+        first = false;
+    });
+
+    if (currentMailboxView.startsWith("level:")) {
+        appendMoveOption(otherList, "inbox", "📥 Inbox", first);
+        first = false;
+    }
+    appendMoveOption(otherList, "archive", "Archive", first);
+    appendMoveOption(otherList, "trash", "Trash", !first && !cachedLevels.length);
+
+    document.getElementById("moveNewLevelBtn").onclick = () => {
+        pendingMoveAfterCreate = true;
+        document.getElementById("newLevelNameInput").value = "";
+        document.getElementById("createLevelPopup").style.display = "flex";
+    };
+
+    document.getElementById("movePopup").style.display = "flex";
+}
+
+function closeMovePopup() {
+    document.getElementById("movePopup").style.display = "none";
+}
+
+function closeCreateLevelPopup() {
+    document.getElementById("createLevelPopup").style.display = "none";
+    pendingMoveAfterCreate = false;
+}
+
+async function saveNewLevel() {
+    const name = document.getElementById("newLevelNameInput").value.trim();
+    if (!name) {
+        alert("Enter a level name.");
+        return;
+    }
+    const result = await postMailAction("create_level", [], { name });
+    if (!result || !result.success) {
+        alert((result && result.error) || "Could not create level.");
+        return;
+    }
+    closeCreateLevelPopup();
+    await fetchLevels();
+    await refreshLevelsSidebar();
+
+    if (pendingMoveAfterCreate && result.level && result.level.id) {
+        pendingMoveAfterCreate = false;
+        const ids = Array.from(selectedMessageIds);
+        if (ids.length) {
+            const moveResult = await postMailAction("move_to_level", ids, { levelId: result.level.id });
+            if (moveResult && moveResult.success) {
+                closeMovePopup();
+                clearSelection();
+                await reloadCurrentView();
+                await refreshSidebarCounts();
+                showMoveConfirmation(ids.length, result.level.id);
+                return;
+            }
+        }
+    }
+    await openMovePopup();
+}
+
+function showMoveConfirmation(count, destinationValue) {
+    const label = getMoveDestinationLabel(destinationValue);
+    const content = document.getElementById("content");
+    let toast = document.getElementById("moveToast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "moveToast";
+        toast.className = "move-toast";
+    }
+    toast.innerHTML = "";
+    const message = document.createElement("span");
+    message.textContent = count === 1 ? "1 mail moved to " + label : count + " mails moved to " + label;
+    toast.appendChild(message);
+
+    const viewBtn = document.createElement("button");
+    viewBtn.textContent = "View " + label;
+    viewBtn.addEventListener("click", () => navigateAfterMove(destinationValue));
+    toast.appendChild(viewBtn);
+
+    const heading = content.querySelector("h1");
+    if (heading && heading.nextElementSibling) {
+        content.insertBefore(toast, heading.nextElementSibling.nextElementSibling);
+    } else {
+        content.prepend(toast);
+    }
+    toast.classList.add("visible");
+    if (moveToastTimer) clearTimeout(moveToastTimer);
+    moveToastTimer = setTimeout(() => toast.classList.remove("visible"), 8000);
+}
+
+function navigateAfterMove(destinationValue) {
+    if (destinationValue === "trash") loadTrash();
+    else if (destinationValue === "archive") loadSmartView("archived");
+    else if (destinationValue === "inbox") loadInbox();
+    else if (getLevelById(destinationValue)) loadLevel(destinationValue);
+    else loadInbox();
+}
+
+async function confirmMoveSelected() {
+    const ids = Array.from(selectedMessageIds);
+    if (!ids.length) return;
+
+    const selected = document.querySelector('input[name="moveDestination"]:checked');
+    const destination = selected ? selected.value : moveDestinationValue;
+    if (!destination) {
+        alert("Choose a destination.");
+        return;
+    }
+
+    closeMovePopup();
+    let result;
+
+    if (destination === "trash") {
+        result = await postMailAction("trash", ids);
+    } else if (destination === "archive") {
+        result = await postMailAction("archive", ids);
+    } else if (destination === "inbox") {
+        result = await postMailAction("remove_from_level", ids);
+    } else if (getLevelById(destination)) {
+        result = await postMailAction("move_to_level", ids, { levelId: destination });
+    } else {
+        alert("Unsupported move destination.");
+        return;
+    }
+
+    if (!result || !result.success) {
+        alert((result && result.error) || "Could not move selected messages.");
+        return;
+    }
+
+    const movedCount = ids.length;
+    clearSelection();
+    await reloadCurrentView();
+    await refreshSidebarCounts();
+    await refreshLevelsSidebar();
+    showMoveConfirmation(movedCount, destination);
+}
+
+async function bulkMoveSelected() {
+    await openMovePopup();
+}
+
+async function loadLevel(levelId) {
+    currentMailboxView = "level:" + levelId;
+    const level = getLevelById(levelId) || (await fetchLevels()).find((item) => item.id === levelId);
+    setActiveNav("navLevel_" + levelId);
+    await loadInboxMessages({
+        sync: false,
+        url: "http://localhost:3000/inbox?levelId=" + encodeURIComponent(levelId),
+        title: "📁 " + ((level && level.name) || "Level"),
+        emptyText: "No messages in this level."
+    });
+}
+
+function getCategoryOptions() {
+    return Object.keys(CATEGORY_LABELS).map((value) => ({
+        value,
+        label: CATEGORY_LABELS[value]
+    }));
+}
+
+async function postMailAction(action, ids, params) {
+    const body = { action, ids: ids || [] };
+    if (params) body.params = params;
+    const response = await fetch("http://localhost:3000/mmail/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+        console.error("[MMail] Action failed:", action, "status", response.status);
+        return { success: false, error: "Server error (" + response.status + ")" };
+    }
+    return response.json();
+}
+
+async function bulkTrashSelected() {
+    const ids = Array.from(selectedMessageIds);
+    if (!ids.length) return;
+    const result = await postMailAction("trash", ids);
+    if (!result || !result.success) {
+        alert((result && result.error) || "Could not move selected messages to Trash.");
+        return;
+    }
+    ids.forEach((id) => selectedMessageIds.delete(id));
+    clearSelection();
+    await reloadCurrentView();
+    await refreshSidebarCounts();
+}
+
+async function bulkSetCategorySelected() {
+    const ids = Array.from(selectedMessageIds);
+    if (!ids.length) return;
+    const selectEl = bulkToolbarEl && bulkToolbarEl.querySelector(".category-target");
+    const category = selectEl ? selectEl.value : "";
+    if (!category) {
+        alert("Choose a category.");
+        return;
+    }
+    const result = await postMailAction("set_category", ids, { category });
+    if (!result || !result.success) {
+        alert((result && result.error) || "Could not update category.");
+        return;
+    }
+    clearSelection();
+    await reloadCurrentView();
+    await refreshSidebarCounts();
+}
+
+async function trashMessage(id) {
+    console.log("[MMail] Trash requested", id);
+    if (!id) {
+        console.error("[MMail] Trash failed: missing message id");
+        alert("Could not move message to Trash (missing id).");
+        return false;
+    }
+    const result = await postMailAction("trash", [id]);
+    if (!result || !result.success) {
+        alert((result && result.error) || "Could not move message to Trash.");
+        return false;
+    }
+    selectedMessageIds.delete(id);
+    await reloadCurrentView();
+    await refreshSidebarCounts();
+    return true;
+}
+
+function renderSelectableMailList(options) {
+    const content = document.getElementById("content");
+    content.innerHTML = "";
+    bulkToolbarEl = null;
+    selectAllCheckboxEl = null;
+
+    const heading = document.createElement("h1");
+    heading.textContent = options.title;
+    content.appendChild(heading);
+
+    const divider = document.createElement("hr");
+    content.appendChild(divider);
+
+    const itemIds = options.items.map((item) => item.id).filter(Boolean);
+    syncVisibleMessageIds(itemIds);
+
+    const listToolbar = document.createElement("div");
+    listToolbar.className = "mail-list-toolbar";
+
+    selectAllCheckboxEl = document.createElement("input");
+    selectAllCheckboxEl.type = "checkbox";
+    selectAllCheckboxEl.title = "Select all visible messages";
+    selectAllCheckboxEl.addEventListener("change", () => setSelectAllVisible(selectAllCheckboxEl.checked));
+
+    const selectAllLabel = document.createElement("label");
+    selectAllLabel.appendChild(selectAllCheckboxEl);
+    const selectAllText = document.createElement("span");
+    selectAllText.textContent = "Select all";
+    selectAllLabel.appendChild(selectAllText);
+    listToolbar.appendChild(selectAllLabel);
+    content.appendChild(listToolbar);
+
+    bulkToolbarEl = document.createElement("div");
+    bulkToolbarEl.className = "bulk-toolbar";
+
+    const countSpan = document.createElement("span");
+    countSpan.className = "selected-count";
+    countSpan.textContent = "0 selected";
+    bulkToolbarEl.appendChild(countSpan);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", bulkTrashSelected);
+    bulkToolbarEl.appendChild(deleteBtn);
+
+    const moveBtn = document.createElement("button");
+    moveBtn.className = "move-btn";
+    moveBtn.textContent = "Move";
+    moveBtn.addEventListener("click", bulkMoveSelected);
+    bulkToolbarEl.appendChild(moveBtn);
+
+    content.appendChild(bulkToolbarEl);
+    updateBulkToolbar();
+    updateSelectAllCheckbox();
+
+    if (!options.items.length) {
+        const empty = document.createElement("p");
+        empty.textContent = options.emptyText || "No messages.";
+        content.appendChild(empty);
+        return;
+    }
+
+    options.items.forEach((item) => {
+        const card = document.createElement("div");
+        card.className = "mail-card";
+        if (options.borderColor) card.style.borderLeftColor = options.borderColor;
+
+        const row = document.createElement("div");
+        row.className = "mail-card-row";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "mail-select-checkbox";
+        checkbox.dataset.messageId = item.id || "";
+        checkbox.checked = item.id ? selectedMessageIds.has(item.id) : false;
+        if (!item.id) {
+            checkbox.disabled = true;
+            checkbox.title = "Message id unavailable";
+        } else {
+            checkbox.addEventListener("change", () => toggleMessageSelection(item.id, checkbox.checked));
+        }
+        row.appendChild(checkbox);
+
+        const body = document.createElement("div");
+        body.className = "mail-card-body";
+
+        const lines = options.buildLines(item);
+        lines.forEach((line) => {
+            const lineRow = document.createElement("div");
+            if (line.bold) {
+                const label = document.createElement("b");
+                label.textContent = line.bold;
+                lineRow.appendChild(label);
+                lineRow.appendChild(document.createTextNode(" " + (line.text || "")));
+            } else {
+                lineRow.textContent = line.text || "";
+                if (line.muted) lineRow.style.color = "gray";
+            }
+            body.appendChild(lineRow);
+        });
+        row.appendChild(body);
+        card.appendChild(row);
+
+        const actions = document.createElement("div");
+        actions.className = "trash-actions";
+
+        const deleteBtnSingle = document.createElement("button");
+        deleteBtnSingle.textContent = "Delete";
+        deleteBtnSingle.style.background = "#ef4444";
+        deleteBtnSingle.style.color = "#fff";
+        if (!item.id) {
+            deleteBtnSingle.disabled = true;
+            deleteBtnSingle.title = "Message id unavailable — restart MBrowser to reload mail server";
+        } else {
+            deleteBtnSingle.addEventListener("click", () => trashMessage(item.id));
+        }
+        actions.appendChild(deleteBtnSingle);
+
+        card.appendChild(actions);
+        content.appendChild(card);
+    });
+}
+
+function renderMailList(options) {
+    const content = document.getElementById("content");
+    content.innerHTML = "";
+
+    const heading = document.createElement("h1");
+    heading.textContent = options.title;
+    content.appendChild(heading);
+
+    const divider = document.createElement("hr");
+    content.appendChild(divider);
+
+    if (!options.items.length) {
+        const empty = document.createElement("p");
+        empty.textContent = options.emptyText || "No messages.";
+        content.appendChild(empty);
+        return;
+    }
+
+    options.items.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "mail-card";
+        if (options.borderColor) card.style.borderLeftColor = options.borderColor;
+
+        const lines = options.buildLines(item);
+        lines.forEach((line) => {
+            const row = document.createElement("div");
+            if (line.bold) {
+                const label = document.createElement("b");
+                label.textContent = line.bold;
+                row.appendChild(label);
+                row.appendChild(document.createTextNode(" " + (line.text || "")));
+            } else {
+                row.textContent = line.text || "";
+                if (line.muted) row.style.color = "gray";
+            }
+            card.appendChild(row);
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "trash-actions";
+
+        if (options.showEdit) {
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "Edit";
+            editBtn.style.background = "#2196f3";
+            editBtn.style.color = "#fff";
+            editBtn.addEventListener("click", () => editDraft(index));
+            actions.appendChild(editBtn);
+        }
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.style.background = "#ef4444";
+        deleteBtn.style.color = "#fff";
+        if (!item.id) {
+            deleteBtn.disabled = true;
+            deleteBtn.title = "Message id unavailable — restart MBrowser to reload mail server";
+        } else {
+            deleteBtn.addEventListener("click", () => trashMessage(item.id));
+        }
+        actions.appendChild(deleteBtn);
+
+        card.appendChild(actions);
+        content.appendChild(card);
+    });
+}
 
 function openPopup(type) {
     if(type === 'signin')
@@ -147,16 +1128,82 @@ function loginUser(){
     closePopup();
 }
 
-async function loadInbox(){
-    document.getElementById("content").innerHTML = "<h1>📥 Syncing Gmail Server...</h1>";
-    try{
-        const mails = await fetch("http://localhost:3000/syncInbox").then(r=>r.json());
-        let html="<h1>📥 Inbox</h1><hr>";
-        mails.forEach(m => {
-            html+=`<div class="mail-card"><b>From:</b> ${m.from}<br><b>Subject:</b> ${m.subject}<br><p>${m.msg}</p></div>`;
+async function loadInboxMessages(options) {
+    clearSelection();
+    const content = document.getElementById("content");
+    try {
+        if (options.sync) {
+            const status = document.createElement("p");
+            status.className = "sync-status";
+            status.id = "syncStatus";
+            status.textContent = "Syncing incoming mail…";
+            content.innerHTML = "";
+            const heading = document.createElement("h1");
+            heading.textContent = options.title;
+            content.appendChild(heading);
+            content.appendChild(document.createElement("hr"));
+            content.appendChild(status);
+
+            const syncRes = await fetch("http://localhost:3000/syncInbox");
+            const syncPayload = await syncRes.json();
+            if (!syncPayload.success && syncPayload.error) {
+                status.textContent = "Sync note: " + syncPayload.error + " — showing local inbox.";
+            } else {
+                status.textContent = "Inbox synced.";
+            }
+        }
+
+        const response = await fetch(options.url);
+        const mails = await response.json();
+        renderSelectableMailList({
+            title: options.title,
+            items: mails,
+            emptyText: options.emptyText,
+            showCategoryBulk: options.showCategoryBulk !== false,
+            buildLines: (m) => [
+                { bold: "From:", text: m.from || "Unknown" },
+                { bold: "Subject:", text: m.subject || "(No Subject)" },
+                { text: m.msg || "", muted: true }
+            ]
         });
-        document.getElementById("content").innerHTML=html;
-    }catch(e){ document.getElementById("content").innerHTML="<h3>❌ Backend Offline on Port 3000</h3>"; }
+        await refreshSidebarCounts();
+    } catch (e) {
+        content.innerHTML = "<h3>❌ Backend Offline on Port 3000</h3>";
+    }
+}
+
+async function loadInbox(){
+    currentMailboxView = "inbox";
+    setActiveNav("navInbox");
+    await loadInboxMessages({
+        sync: true,
+        url: "http://localhost:3000/inbox",
+        title: "📥 Inbox",
+        emptyText: "No inbox messages."
+    });
+}
+
+async function loadInboxCategory(category){
+    currentMailboxView = "inbox:" + category;
+    setActiveNav(CATEGORY_NAV_MAP[category] || "navInbox");
+    await loadInboxMessages({
+        sync: true,
+        url: "http://localhost:3000/inbox?category=" + encodeURIComponent(category),
+        title: "📥 " + (CATEGORY_LABELS[category] || category),
+        emptyText: "No messages in this category."
+    });
+}
+
+async function loadSmartView(view){
+    currentMailboxView = "smart:" + view;
+    const navMap = SMART_NAV_MAP;
+    setActiveNav(navMap[view] || "navInbox");
+    await loadInboxMessages({
+        sync: view !== "archived",
+        url: "http://localhost:3000/inbox?smartView=" + encodeURIComponent(view),
+        title: "🔎 " + (SMART_VIEW_LABELS[view] || view),
+        emptyText: "No messages in this smart view."
+    });
 }
 
 function openCompose(){
@@ -226,36 +1273,44 @@ async function saveDraft(){
 }
 
 async function loadSent(){
+    currentMailboxView = "sent";
+    setActiveNav("navSent");
+    clearSelection();
     try {
         const mails = await fetch("http://localhost:3000/sent").then(r=>r.json());
-        let html = "<h1>📤 Sent Box</h1><hr>";
-        mails.forEach(m=>{ html += `<div class="mail-card" style="border-left-color:#16a34a;"><b>To:</b> ${m.to}<br><b>Subject:</b> ${m.subject}<br><p>${m.msg}</p></div>`; });
-        document.getElementById("content").innerHTML = html;
+        renderSelectableMailList({
+            title: "📤 Sent Box",
+            items: mails,
+            emptyText: "No sent messages.",
+            showCategoryBulk: false,
+            borderColor: "#16a34a",
+            buildLines: (m) => [
+                { bold: "To:", text: m.to || "Unknown" },
+                { bold: "Subject:", text: m.subject || "(No Subject)" },
+                { text: m.msg || "", muted: true }
+            ]
+        });
     } catch(e) { alert("Server connection error."); }
 }
 
 async function loadDrafts(){
+    currentMailboxView = "drafts";
+    setActiveNav("navDrafts");
+    clearSelection();
     try {
         const drafts = await fetch("http://localhost:3000/draft").then(r=>r.json());
-        let html="<h1>📝 Drafts</h1><hr>";
-        if(drafts.length === 0) html += "<p>No draft logs available.</p>";
-        // এখানে ফিক্স করা হয়েছে (dataset -> drafts)
-        drafts.forEach((d, i)=>{ 
-            html+=`<div class="mail-card" style="border-left-color:#6b7280;">
-                <b>Subject:</b> ${d.subject || '(No Subject)'}<br>
-                To: ${d.to || 'N/A'}<br><p style="color:gray;">${d.msg || ''}</p>
-             <button onclick="editDraft(${i})"
-style="padding:4px 10px; background:#2196f3; color:white; margin-right:5px;">
-Edit
-</button>
-
-<button onclick="deleteDraft(${i})"
-style="padding:4px 10px; background:#ef4444; color:white;">
-Delete
-</button>   
-            </div>`; 
+        renderMailList({
+            title: "📝 Drafts",
+            items: drafts,
+            emptyText: "No draft logs available.",
+            borderColor: "#6b7280",
+            showEdit: true,
+            buildLines: (d) => [
+                { bold: "Subject:", text: d.subject || "(No Subject)" },
+                { text: "To: " + (d.to || "N/A") },
+                { text: d.msg || "", muted: true }
+            ]
         });
-        document.getElementById("content").innerHTML=html;
     } catch(e) { alert("Error loading drafts."); }
 }
 async function editDraft(index){
@@ -279,15 +1334,156 @@ async function editDraft(index){
 
 }
 async function deleteDraft(index){
-    await fetch("http://localhost:3000/deleteDraft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ index })
-    });
-    loadDrafts();
+    const drafts = await fetch("http://localhost:3000/draft").then(r => r.json());
+    const draft = drafts[index];
+    if (!draft || !draft.id) {
+        alert("Could not find draft to delete.");
+        return;
+    }
+    await trashMessage(draft.id);
+}
+
+async function loadTrash(){
+    currentMailboxView = "trash";
+    setActiveNav("navTrash");
+    clearSelection();
+    const content = document.getElementById("content");
+    content.innerHTML = "";
+
+    const heading = document.createElement("h1");
+    heading.textContent = "🗑 Trash";
+    content.appendChild(heading);
+
+    const divider = document.createElement("hr");
+    content.appendChild(divider);
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "trash-toolbar";
+
+    const emptyBtn = document.createElement("button");
+    emptyBtn.className = "danger";
+    emptyBtn.textContent = "Empty Trash";
+    emptyBtn.addEventListener("click", emptyTrash);
+    toolbar.appendChild(emptyBtn);
+    content.appendChild(toolbar);
+
+    try {
+        const response = await fetch("http://localhost:3000/mmail/trash");
+        if (!response.ok) {
+            console.error("[MMail] Trash load failed, status:", response.status);
+            const error = document.createElement("h3");
+            error.textContent = "❌ Could not load Trash (server route unavailable). Restart MBrowser.";
+            content.appendChild(error);
+            return;
+        }
+        const payload = await response.json();
+        const items = (payload && payload.items) || [];
+
+        if (!items.length) {
+            const empty = document.createElement("p");
+            empty.textContent = "Trash is empty.";
+            content.appendChild(empty);
+            return;
+        }
+
+        items.forEach((item) => {
+            const card = document.createElement("div");
+            card.className = "mail-card";
+            card.style.borderLeftColor = "#b91c1c";
+
+            const subject = document.createElement("div");
+            const subjectLabel = document.createElement("b");
+            subjectLabel.textContent = "Subject:";
+            subject.appendChild(subjectLabel);
+            subject.appendChild(document.createTextNode(" " + (item.subject || "(No Subject)")));
+            card.appendChild(subject);
+
+            const meta = document.createElement("div");
+            meta.style.marginTop = "6px";
+            const recipient = item.to || item.from || "N/A";
+            meta.textContent = `To/From: ${recipient}`;
+            card.appendChild(meta);
+
+            if (item.previousMailbox) {
+                const prev = document.createElement("div");
+                prev.style.color = "#6b7280";
+                prev.style.fontSize = "12px";
+                prev.style.marginTop = "4px";
+                prev.textContent = `Previous mailbox: ${item.previousMailbox}`;
+                card.appendChild(prev);
+            }
+
+            if (item.trashedAt) {
+                const trashed = document.createElement("div");
+                trashed.style.color = "#6b7280";
+                trashed.style.fontSize = "12px";
+                trashed.style.marginTop = "4px";
+                trashed.textContent = `Trashed: ${new Date(item.trashedAt).toLocaleString()}`;
+                card.appendChild(trashed);
+            }
+
+            const actions = document.createElement("div");
+            actions.className = "trash-actions";
+
+            const restoreBtn = document.createElement("button");
+            restoreBtn.textContent = "Restore";
+            restoreBtn.style.background = "#2563eb";
+            restoreBtn.style.color = "#fff";
+            restoreBtn.addEventListener("click", () => restoreTrashItem(item.id));
+            actions.appendChild(restoreBtn);
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "Delete Permanently";
+            deleteBtn.className = "danger";
+            deleteBtn.style.background = "#b91c1c";
+            deleteBtn.style.color = "#fff";
+            deleteBtn.addEventListener("click", () => deleteTrashItemPermanently(item.id));
+            actions.appendChild(deleteBtn);
+
+            card.appendChild(actions);
+            content.appendChild(card);
+        });
+    } catch (e) {
+        const error = document.createElement("h3");
+        error.textContent = "❌ Could not load Trash.";
+        content.appendChild(error);
+    }
+}
+
+async function restoreTrashItem(id) {
+    const result = await postMailAction("restore", [id]);
+    if (!result || !result.success) {
+        alert((result && result.error) || "Could not restore message.");
+        return;
+    }
+    loadTrash();
+    refreshSidebarCounts();
+}
+
+async function deleteTrashItemPermanently(id) {
+    if (!confirm("Delete this message permanently? This cannot be undone.")) return;
+    const result = await postMailAction("delete_permanently", [id]);
+    if (!result || !result.success) {
+        alert((result && result.error) || "Could not delete message permanently.");
+        return;
+    }
+    loadTrash();
+}
+
+async function emptyTrash() {
+    if (!confirm("Empty Trash permanently? This cannot be undone.")) return;
+    const result = await postMailAction("empty_trash", []);
+    if (!result || !result.success) {
+        alert((result && result.error) || "Could not empty Trash.");
+        return;
+    }
+    loadTrash();
 }
 
 function toggleDarkMode(){ document.body.classList.toggle("dark"); }
+
+refreshSidebarCounts();
+refreshLevelsSidebar();
 </script>
 <script type="module">
 
