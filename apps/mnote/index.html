@@ -5,38 +5,181 @@
 <title>MNotes</title>
 
 <style>
-body{
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:#f5f5f5;
+* {
+  box-sizing: border-box;
 }
 
-.container{
-  padding:40px;
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f5f5;
+  color: #1f2937;
 }
 
-h1{
-  color:#b45309;
+.container {
+  padding: 40px;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
-textarea{
-  width:100%;
-  height:400px;
-  padding:15px;
-  font-size:16px;
-  border:1px solid #ccc;
-  border-radius:10px;
-  resize:none;
+h1 {
+  color: #b45309;
+  margin: 0 0 20px;
 }
 
-button{
-  margin-top:15px;
-  padding:12px 25px;
-  background:#b45309;
-  color:white;
-  border:none;
-  border-radius:10px;
-  cursor:pointer;
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: #92400e;
+}
+
+.notes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.notes-list li {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  margin-bottom: 8px;
+}
+
+.notes-list li:hover {
+  background: #fff7ed;
+}
+
+.notes-list li.selected {
+  background: #ffedd5;
+  border-color: #fdba74;
+}
+
+.note-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.note-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.empty-list {
+  color: #6b7280;
+  font-size: 14px;
+  padding: 8px 4px;
+}
+
+.title-input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 18px;
+  font-weight: bold;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.title-input:disabled,
+textarea:disabled {
+  background: #f9fafb;
+  color: #374151;
+}
+
+.content-view {
+  width: 100%;
+  min-height: 400px;
+  padding: 15px;
+  font-size: 16px;
+  line-height: 1.5;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background: #f9fafb;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+textarea {
+  width: 100%;
+  height: 400px;
+  padding: 15px;
+  font-size: 16px;
+  line-height: 1.5;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  resize: vertical;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+button {
+  padding: 12px 25px;
+  background: #b45309;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:hover {
+  background: #92400e;
+}
+
+button:disabled {
+  background: #d1d5db;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: #4b5563;
+}
+
+button.secondary:hover {
+  background: #374151;
+}
+
+.status {
+  margin-top: 12px;
+  min-height: 20px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.status.error {
+  color: #b91c1c;
+}
+
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 
@@ -48,32 +191,250 @@ button{
 
 <h1>📝 MNotes</h1>
 
-<textarea id="notes"></textarea>
+<div class="layout">
+  <div class="panel">
+    <h2>Notes List</h2>
+    <ul id="notesList" class="notes-list"></ul>
+  </div>
 
-<br>
+  <div class="panel">
+    <input id="noteTitle" class="title-input" type="text" placeholder="Note title" disabled>
 
-<button onclick="saveNotes()">
-💾 Save Notes
-</button>
+    <div id="contentView" class="content-view">Select a note or create a new one.</div>
+    <textarea id="noteContent" hidden></textarea>
+
+    <div class="toolbar">
+      <button type="button" class="secondary" onclick="startNewNote()">➕ New Note</button>
+      <button type="button" id="editBtn" onclick="startEdit()" disabled>✏️ Edit</button>
+      <button type="button" id="saveBtn" onclick="saveNote()" disabled>💾 Save</button>
+    </div>
+
+    <div id="status" class="status"></div>
+  </div>
+</div>
 
 </div>
 
 <script>
+const API_BASE = "http://localhost:3000/mnotes";
 
-document.getElementById("notes").value =
-localStorage.getItem("mnotes") || "";
+let notes = [];
+let selectedId = null;
+let isEditing = false;
+let isNewDraft = false;
 
-function saveNotes(){
-
-localStorage.setItem(
-"mnotes",
-document.getElementById("notes").value
-);
-
-alert("Notes Saved");
-
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
+function formatTime(timestamp) {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return date.toLocaleString();
+}
+
+function setStatus(message, isError) {
+  const status = document.getElementById("status");
+  status.textContent = message || "";
+  status.className = isError ? "status error" : "status";
+}
+
+function updateButtons() {
+  document.getElementById("editBtn").disabled = isEditing || isNewDraft || !selectedId;
+  document.getElementById("saveBtn").disabled = !isEditing;
+}
+
+function setEditorMode(editing) {
+  isEditing = editing;
+  const titleInput = document.getElementById("noteTitle");
+  const contentView = document.getElementById("contentView");
+  const contentInput = document.getElementById("noteContent");
+
+  titleInput.disabled = !editing;
+  contentInput.hidden = !editing;
+  contentView.hidden = editing;
+  updateButtons();
+}
+
+function renderNotesList() {
+  const list = document.getElementById("notesList");
+  list.innerHTML = "";
+
+  if (!notes.length) {
+    list.innerHTML = '<li class="empty-list">No saved notes yet.</li>';
+    return;
+  }
+
+  notes.forEach((note) => {
+    const item = document.createElement("li");
+    if (note.id === selectedId) item.classList.add("selected");
+
+    item.innerHTML =
+      '<div class="note-title">' + escapeHtml(note.title || "Untitled") + "</div>" +
+      '<div class="note-meta">Updated ' + escapeHtml(formatTime(note.updatedAt)) + "</div>";
+
+    item.onclick = () => selectNote(note.id);
+    list.appendChild(item);
+  });
+}
+
+function showNote(note) {
+  const titleInput = document.getElementById("noteTitle");
+  const contentView = document.getElementById("contentView");
+  const contentInput = document.getElementById("noteContent");
+
+  titleInput.value = note.title || "Untitled";
+  contentInput.value = note.content || "";
+  contentView.textContent = note.content || "";
+}
+
+function clearEditor(message) {
+  selectedId = null;
+  isNewDraft = false;
+  document.getElementById("noteTitle").value = "";
+  document.getElementById("noteContent").value = "";
+  document.getElementById("contentView").textContent = message || "Select a note or create a new one.";
+  setEditorMode(false);
+  renderNotesList();
+}
+
+async function fetchNotesList() {
+  const response = await fetch(API_BASE);
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error((data && data.error) || "Failed to load notes.");
+  }
+  notes = Array.isArray(data.notes) ? data.notes : [];
+}
+
+async function importLegacyNotesIfNeeded() {
+  const legacy = localStorage.getItem("mnotes");
+  if (!legacy || !legacy.trim()) return false;
+  if (notes.length > 0) return false;
+
+  const response = await fetch(API_BASE + "/import-legacy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content: legacy })
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error((data && data.error) || "Failed to import saved browser notes.");
+  }
+
+  localStorage.removeItem("mnotes");
+  return true;
+}
+
+async function loadNotes() {
+  setStatus("Loading notes...");
+  await fetchNotesList();
+
+  const imported = await importLegacyNotesIfNeeded();
+  if (imported) {
+    await fetchNotesList();
+    setStatus("Imported your previous browser notes into the first saved note.");
+  } else {
+    setStatus("");
+  }
+
+  renderNotesList();
+}
+
+async function selectNote(id) {
+  if (isEditing) {
+    const keepEditing = confirm("You have unsaved changes. Discard them and open another note?");
+    if (!keepEditing) return;
+  }
+
+  setStatus("Loading note...");
+  const response = await fetch(API_BASE + "/" + encodeURIComponent(id));
+  const data = await response.json();
+  if (!response.ok || !data.success || !data.note) {
+    setStatus((data && data.error) || "Failed to load note.", true);
+    return;
+  }
+
+  selectedId = id;
+  isNewDraft = false;
+  showNote(data.note);
+  setEditorMode(false);
+  renderNotesList();
+  setStatus("");
+}
+
+function startNewNote() {
+  if (isEditing) {
+    const keepEditing = confirm("You have unsaved changes. Discard them and create a new note?");
+    if (!keepEditing) return;
+  }
+
+  selectedId = null;
+  isNewDraft = true;
+  document.getElementById("noteTitle").value = "";
+  document.getElementById("noteContent").value = "";
+  document.getElementById("contentView").textContent = "";
+  setEditorMode(true);
+  renderNotesList();
+  document.getElementById("noteTitle").focus();
+  setStatus("New note ready. Add a title and content, then save.");
+}
+
+function startEdit() {
+  if (!selectedId || isNewDraft) return;
+  setEditorMode(true);
+  document.getElementById("noteTitle").focus();
+  setStatus("Editing note. Save when you are done.");
+}
+
+async function saveNote() {
+  const title = document.getElementById("noteTitle").value.trim();
+  const content = document.getElementById("noteContent").value;
+
+  if (!title && !content.trim()) {
+    setStatus("Add a title or some note content before saving.", true);
+    return;
+  }
+
+  const payload = {
+    title: title || "Untitled",
+    content
+  };
+
+  setStatus("Saving...");
+
+  const url = isNewDraft ? API_BASE : API_BASE + "/" + encodeURIComponent(selectedId);
+  const method = isNewDraft ? "POST" : "PUT";
+
+  const response = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json();
+
+  if (!response.ok || !data.success || !data.note) {
+    setStatus((data && data.error) || "Failed to save note.", true);
+    return;
+  }
+
+  selectedId = data.note.id;
+  isNewDraft = false;
+  showNote(data.note);
+  setEditorMode(false);
+  await fetchNotesList();
+  renderNotesList();
+  setStatus("Note saved.");
+}
+
+loadNotes().catch((error) => {
+  setStatus(error.message || "Could not connect to the notes server.", true);
+});
 </script>
 
 </body>

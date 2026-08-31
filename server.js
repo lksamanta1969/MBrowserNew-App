@@ -32,6 +32,10 @@ const {
 const mailStore = createMailStore(dbPath);
 const mailActions = createMailActions(mailStore);
 
+const mnotesDbPath = path.join(__dirname, "mnotes.json");
+const { createMNotesStore } = require("./server/mnotes/MNotesStore");
+const mnotesStore = createMNotesStore(mnotesDbPath);
+
 function readDB() {
     return mailStore.load();
 }
@@ -321,6 +325,77 @@ app.post("/mpayAddMoney", (req, res) => {
 });
 
 app.get("/mpayHistory", (req, res) => res.json(readMpayDB().transactions));
+
+/* MNOTES APIS */
+app.get("/mnotes", (req, res) => {
+    try {
+        res.json({ success: true, notes: mnotesStore.listNotes() });
+    } catch (error) {
+        console.error("[MNOTES] List failed:", error);
+        res.status(500).json({ success: false, error: "Failed to load notes." });
+    }
+});
+
+app.get("/mnotes/:id", (req, res) => {
+    try {
+        const note = mnotesStore.getNote(String(req.params.id || "").trim());
+        if (!note) {
+            return res.status(404).json({ success: false, error: "Note not found." });
+        }
+        res.json({ success: true, note });
+    } catch (error) {
+        console.error("[MNOTES] Read failed:", error);
+        res.status(500).json({ success: false, error: "Failed to load note." });
+    }
+});
+
+app.post("/mnotes/import-legacy", (req, res) => {
+    try {
+        const content = req.body && req.body.content;
+        const result = mnotesStore.importLegacyContent(content);
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+        res.json(result);
+    } catch (error) {
+        console.error("[MNOTES] Legacy import failed:", error);
+        res.status(500).json({ success: false, error: "Failed to import legacy notes." });
+    }
+});
+
+app.post("/mnotes", (req, res) => {
+    try {
+        const title = req.body && req.body.title;
+        const content = req.body && req.body.content;
+        if (!String(title || "").trim() && !String(content || "").trim()) {
+            return res.status(400).json({ success: false, error: "Title or content is required." });
+        }
+        const note = mnotesStore.createNote({ title, content });
+        res.json({ success: true, note });
+    } catch (error) {
+        console.error("[MNOTES] Create failed:", error);
+        res.status(500).json({ success: false, error: "Failed to create note." });
+    }
+});
+
+app.put("/mnotes/:id", (req, res) => {
+    try {
+        const id = String(req.params.id || "").trim();
+        const title = req.body && req.body.title;
+        const content = req.body && req.body.content;
+        if (!String(title || "").trim() && !String(content || "").trim()) {
+            return res.status(400).json({ success: false, error: "Title or content is required." });
+        }
+        const note = mnotesStore.updateNote(id, { title, content });
+        if (!note) {
+            return res.status(404).json({ success: false, error: "Note not found." });
+        }
+        res.json({ success: true, note });
+    } catch (error) {
+        console.error("[MNOTES] Update failed:", error);
+        res.status(500).json({ success: false, error: "Failed to update note." });
+    }
+});
 
 app.use(express.static(__dirname));
 
