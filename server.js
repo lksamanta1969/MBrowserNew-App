@@ -36,6 +36,10 @@ const mnotesDbPath = path.join(__dirname, "mnotes.json");
 const { createMNotesStore } = require("./server/mnotes/MNotesStore");
 const mnotesStore = createMNotesStore(mnotesDbPath);
 
+const mtubeDbPath = path.join(__dirname, "mtubedb.json");
+const { createMTubeStore } = require("./server/mtube/MTubeStore");
+const mtubeStore = createMTubeStore(mtubeDbPath);
+
 function readDB() {
     return mailStore.load();
 }
@@ -394,6 +398,148 @@ app.put("/mnotes/:id", (req, res) => {
     } catch (error) {
         console.error("[MNOTES] Update failed:", error);
         res.status(500).json({ success: false, error: "Failed to update note." });
+    }
+});
+
+/* MTUBE APIS */
+app.get("/mtube/state", (req, res) => {
+    try {
+        res.json({ success: true, ...mtubeStore.getState() });
+    } catch (error) {
+        console.error("[MTUBE] State failed:", error);
+        res.status(500).json({ success: false, error: "Failed to load MTube data." });
+    }
+});
+
+app.post("/mtube/search-history", (req, res) => {
+    try {
+        const result = mtubeStore.addSearchHistory(req.body && req.body.query);
+        if (!result.success) return res.status(400).json(result);
+        res.json(result);
+    } catch (error) {
+        console.error("[MTUBE] Search history add failed:", error);
+        res.status(500).json({ success: false, error: "Failed to save search history." });
+    }
+});
+
+app.delete("/mtube/search-history", (req, res) => {
+    try {
+        res.json(mtubeStore.clearSearchHistory());
+    } catch (error) {
+        console.error("[MTUBE] Search history clear failed:", error);
+        res.status(500).json({ success: false, error: "Failed to clear search history." });
+    }
+});
+
+app.delete("/mtube/search-history/:id", (req, res) => {
+    try {
+        const result = mtubeStore.removeSearchHistory(String(req.params.id || "").trim());
+        if (!result.success) return res.status(404).json(result);
+        res.json(result);
+    } catch (error) {
+        console.error("[MTUBE] Search history remove failed:", error);
+        res.status(500).json({ success: false, error: "Failed to remove search history item." });
+    }
+});
+
+app.post("/mtube/recent", (req, res) => {
+    try {
+        const result = mtubeStore.addRecentlyOpened(req.body || {});
+        if (!result.success) return res.status(400).json(result);
+        res.json(result);
+    } catch (error) {
+        console.error("[MTUBE] Recent add failed:", error);
+        res.status(500).json({ success: false, error: "Failed to save recently opened item." });
+    }
+});
+
+app.post("/mtube/saved-videos", (req, res) => {
+    try {
+        const body = req.body || {};
+        const result = mtubeStore.addSavedVideo({ url: body.url, title: body.title });
+        if (!result.success) return res.status(400).json(result);
+        res.json(result);
+    } catch (error) {
+        console.error("[MTUBE] Saved video add failed:", error);
+        res.status(500).json({ success: false, error: "Failed to save video." });
+    }
+});
+
+app.delete("/mtube/saved-videos/:id", (req, res) => {
+    try {
+        const result = mtubeStore.removeSavedVideo(String(req.params.id || "").trim());
+        if (!result.success) return res.status(404).json(result);
+        res.json(result);
+    } catch (error) {
+        console.error("[MTUBE] Saved video remove failed:", error);
+        res.status(500).json({ success: false, error: "Failed to remove saved video." });
+    }
+});
+
+app.post("/mtube/library", (req, res) => {
+    try {
+        const body = req.body || {};
+        const result = mtubeStore.addLibraryItem({ path: body.path, displayName: body.displayName });
+        if (!result.success) return res.status(400).json(result);
+        res.json(result);
+    } catch (error) {
+        console.error("[MTUBE] Library add failed:", error);
+        res.status(500).json({ success: false, error: "Failed to add local media." });
+    }
+});
+
+app.delete("/mtube/library/:id", (req, res) => {
+    try {
+        const result = mtubeStore.removeLibraryItem(String(req.params.id || "").trim());
+        if (!result.success) return res.status(404).json(result);
+        res.json(result);
+    } catch (error) {
+        console.error("[MTUBE] Library remove failed:", error);
+        res.status(500).json({ success: false, error: "Failed to remove local media." });
+    }
+});
+
+app.get("/mtube/library/:id/stream", (req, res) => {
+    try {
+        const streamInfo = mtubeStore.getLibraryStreamInfo(String(req.params.id || "").trim());
+        if (!streamInfo.success) {
+            return res.status(streamInfo.item ? 410 : 404).json(streamInfo);
+        }
+
+        const filePath = streamInfo.item.path;
+        const stat = fs.statSync(filePath);
+        const mimeType = streamInfo.mimeType;
+        const range = req.headers.range;
+
+        if (range) {
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+            if (Number.isNaN(start) || Number.isNaN(end) || start > end) {
+                return res.status(416).json({ success: false, error: "Invalid range." });
+            }
+            const chunkSize = end - start + 1;
+            res.writeHead(206, {
+                "Content-Range": `bytes ${start}-${end}/${stat.size}`,
+                "Accept-Ranges": "bytes",
+                "Content-Length": chunkSize,
+                "Content-Type": mimeType
+            });
+            fs.createReadStream(filePath, { start, end }).pipe(res);
+            return;
+        }
+
+        res.writeHead(200, {
+            "Content-Length": stat.size,
+            "Content-Type": mimeType,
+            "Accept-Ranges": "bytes"
+        });
+        fs.createReadStream(filePath).pipe(res);
+    } catch (error) {
+        console.error("[MTUBE] Stream failed:", error);
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, error: "Failed to stream local media." });
+        }
     }
 });
 

@@ -4,33 +4,693 @@
 <meta charset="UTF-8">
 <title>MTube</title>
 <style>
-*{ box-sizing: border-box; transition: 0.2s; }
-body{ margin:0; padding:40px; font-family:Arial, sans-serif; background:#f3f4f6; }
-h1{ color:#b45309; margin-top: 0; }
-.search-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; gap: 10px; margin-bottom: 20px; }
-input{ flex: 1; padding:12px; border-radius:10px; border:1px solid #ccc; font-size:16px; outline: none; }
-button{ padding:12px 25px; border:none; border-radius:10px; background:#b45309; color:white; cursor:pointer; font-weight: bold; }
-button:hover{ background:#92400e; }
-iframe{ width:100%; height: calc(100vh - 200px); min-height: 550px; border:none; border-radius:12px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: Arial, sans-serif;
+  background: #f3f4f6;
+  color: #1f2937;
+}
+h1 { color: #b45309; margin: 0 0 16px; }
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.panel {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.search-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+input[type="text"], input[type="search"] {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  outline: none;
+}
+button {
+  padding: 12px 18px;
+  border: none;
+  border-radius: 10px;
+  background: #b45309;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+button:hover { background: #92400e; }
+button.secondary { background: #4b5563; }
+button.secondary:hover { background: #374151; }
+button:disabled { background: #d1d5db; color: #6b7280; cursor: not-allowed; }
+.side-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.side-tabs button {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.side-tabs button.active {
+  background: #92400e;
+}
+.side-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.side-toolbar input[type="search"] {
+  width: 100%;
+  flex: 1 1 100%;
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.list li {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: #fafafa;
+}
+.list li.clickable { cursor: pointer; }
+.list li.clickable:hover { background: #fff7ed; border-color: #fdba74; }
+.item-title {
+  font-weight: bold;
+  word-break: break-word;
+  margin-bottom: 4px;
+}
+.item-meta {
+  font-size: 12px;
+  color: #6b7280;
+  word-break: break-word;
+}
+.item-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.item-actions button {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.empty-state {
+  color: #6b7280;
+  font-size: 14px;
+  padding: 8px 4px;
+}
+.player-panel {
+  min-height: 560px;
+}
+#videoContainer iframe,
+#videoContainer video,
+#videoContainer audio {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  background: #000;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+#videoContainer iframe {
+  height: calc(100vh - 260px);
+  min-height: 420px;
+}
+#videoContainer video {
+  height: calc(100vh - 260px);
+  min-height: 420px;
+}
+#videoContainer audio {
+  display: block;
+  margin-top: 12px;
+}
+.player-message {
+  padding: 24px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px dashed #d1d5db;
+  color: #4b5563;
+  min-height: 180px;
+}
+.player-message.error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+.status {
+  margin-top: 12px;
+  min-height: 20px;
+  font-size: 14px;
+  color: #6b7280;
+}
+.status.error { color: #b91c1c; }
+.hidden-input { display: none; }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
+
 <h1>📺 MTube</h1>
-<div class="search-container">
-    <input id="searchBox" placeholder="Search YouTube Videos..." onkeypress="if(event.key==='Enter'){openYoutube()}">
-    <button onclick="openYoutube()">Search</button>
+
+<div class="layout">
+  <div class="panel">
+    <div class="side-tabs">
+      <button type="button" class="active" data-panel="history" onclick="switchPanel('history')">Search History</button>
+      <button type="button" data-panel="recent" onclick="switchPanel('recent')">Recently Opened</button>
+      <button type="button" data-panel="saved" onclick="switchPanel('saved')">Saved Videos</button>
+      <button type="button" data-panel="library" onclick="switchPanel('library')">Local Library</button>
+    </div>
+
+    <div id="panel-history">
+      <div class="side-toolbar">
+        <input id="historyFilter" type="search" placeholder="Filter search history..." oninput="renderLists()">
+        <button type="button" class="secondary" onclick="clearSearchHistory()">Clear History</button>
+      </div>
+      <ul id="historyList" class="list"></ul>
+    </div>
+
+    <div id="panel-recent" hidden>
+      <div class="side-toolbar">
+        <input id="recentFilter" type="search" placeholder="Filter recently opened..." oninput="renderLists()">
+      </div>
+      <ul id="recentList" class="list"></ul>
+    </div>
+
+    <div id="panel-saved" hidden>
+      <div class="side-toolbar">
+        <input id="savedFilter" type="search" placeholder="Filter saved videos..." oninput="renderLists()">
+        <button type="button" class="secondary" onclick="saveCurrentVideo()">Save Current Link</button>
+      </div>
+      <ul id="savedList" class="list"></ul>
+    </div>
+
+    <div id="panel-library" hidden>
+      <div class="side-toolbar">
+        <input id="libraryFilter" type="search" placeholder="Filter local library..." oninput="renderLists()">
+        <button type="button" class="secondary" onclick="pickLocalFiles()">Add Local Files</button>
+      </div>
+      <ul id="libraryList" class="list"></ul>
+      <input id="localFileInput" class="hidden-input" type="file" accept="video/*,audio/*,.mp4,.webm,.mkv,.mov,.mp3,.wav,.m4a,.aac,.flac,.opus,.ogg" multiple onchange="handleLocalFileSelection(event)">
+    </div>
+  </div>
+
+  <div class="panel player-panel">
+    <div class="search-container">
+      <input id="searchBox" placeholder="Search YouTube or paste a YouTube link..." onkeypress="if(event.key==='Enter'){openFromSearchBox()}">
+      <button type="button" onclick="openFromSearchBox()">Open</button>
+    </div>
+    <div id="videoContainer">
+      <div class="player-message">Search YouTube, reopen a saved item, or play a file from your local library.</div>
+    </div>
+    <div id="status" class="status"></div>
+  </div>
 </div>
-<div id="videoContainer"></div>
 
 <script>
-function openYoutube(){
-    let q = document.getElementById("searchBox").value.trim();
-    if(!q) return;
-    // ইন-অ্যাপ ফ্রেম লোড প্রোটেকশন
-    document.getElementById("videoContainer").innerHTML = `
-        <iframe src="https://www.youtube.com/results?search_query=${encodeURIComponent(q)}" allowfullscreen></iframe>
-    `;
+const API_BASE = "http://localhost:3000/mtube";
+
+let state = {
+  searchHistory: [],
+  recentlyOpened: [],
+  savedVideos: [],
+  localLibrary: []
+};
+
+let activePanel = "history";
+let currentInputValue = "";
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
+
+function formatTime(timestamp) {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return date.toLocaleString();
+}
+
+function setStatus(message, isError) {
+  const status = document.getElementById("status");
+  status.textContent = message || "";
+  status.className = isError ? "status error" : "status";
+}
+
+async function apiRequest(url, options) {
+  const response = await fetch(url, options);
+  const data = await response.json();
+  if (!response.ok || data.success === false) {
+    throw new Error((data && data.error) || "Request failed.");
+  }
+  return data;
+}
+
+async function loadState() {
+  const data = await apiRequest(API_BASE + "/state");
+  state.searchHistory = data.searchHistory || [];
+  state.recentlyOpened = data.recentlyOpened || [];
+  state.savedVideos = data.savedVideos || [];
+  state.localLibrary = data.localLibrary || [];
+  renderLists();
+}
+
+function switchPanel(name) {
+  activePanel = name;
+  document.querySelectorAll(".side-tabs button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.panel === name);
+  });
+  ["history", "recent", "saved", "library"].forEach((panel) => {
+    document.getElementById("panel-" + panel).hidden = panel !== name;
+  });
+}
+
+function matchesFilter(text, filterValue) {
+  if (!filterValue) return true;
+  return String(text || "").toLowerCase().includes(filterValue.toLowerCase());
+}
+
+function renderLists() {
+  renderHistoryList();
+  renderRecentList();
+  renderSavedList();
+  renderLibraryList();
+}
+
+function renderHistoryList() {
+  const list = document.getElementById("historyList");
+  const filterValue = document.getElementById("historyFilter").value.trim();
+  const items = state.searchHistory.filter((item) => matchesFilter(item.query, filterValue));
+  list.innerHTML = "";
+
+  if (!items.length) {
+    list.innerHTML = '<li class="empty-state">No search history yet.</li>';
+    return;
+  }
+
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = "clickable";
+    li.innerHTML =
+      '<div class="item-title">' + escapeHtml(item.query) + "</div>" +
+      '<div class="item-meta">Searched ' + escapeHtml(formatTime(item.searchedAt)) + "</div>";
+    li.onclick = () => openSearch(item.query, { fromHistory: true });
+    list.appendChild(li);
+  });
+}
+
+function renderRecentList() {
+  const list = document.getElementById("recentList");
+  const filterValue = document.getElementById("recentFilter").value.trim();
+  const items = state.recentlyOpened.filter((item) =>
+    matchesFilter(item.title + " " + (item.query || "") + " " + (item.url || ""), filterValue)
+  );
+  list.innerHTML = "";
+
+  if (!items.length) {
+    list.innerHTML = '<li class="empty-state">Nothing opened recently yet.</li>';
+    return;
+  }
+
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = "clickable";
+    const typeLabel = item.type === "search" ? "Search" : item.type === "youtube" ? "YouTube" : "Local Media";
+    li.innerHTML =
+      '<div class="item-title">' + escapeHtml(item.title) + "</div>" +
+      '<div class="item-meta">' + escapeHtml(typeLabel) + " · Opened " + escapeHtml(formatTime(item.openedAt)) + "</div>";
+    li.onclick = () => reopenRecent(item);
+    list.appendChild(li);
+  });
+}
+
+function renderSavedList() {
+  const list = document.getElementById("savedList");
+  const filterValue = document.getElementById("savedFilter").value.trim();
+  const items = state.savedVideos.filter((item) =>
+    matchesFilter(item.title + " " + item.url, filterValue)
+  );
+  list.innerHTML = "";
+
+  if (!items.length) {
+    list.innerHTML = '<li class="empty-state">No saved videos yet.</li>';
+    return;
+  }
+
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.innerHTML =
+      '<div class="item-title">' + escapeHtml(item.title) + "</div>" +
+      '<div class="item-meta">Saved ' + escapeHtml(formatTime(item.savedAt)) + "</div>" +
+      '<div class="item-actions">' +
+      '<button type="button" data-action="open">Open</button>' +
+      '<button type="button" class="secondary" data-action="remove">Remove</button>' +
+      "</div>";
+
+    li.querySelector('[data-action="open"]').addEventListener("click", () => {
+      openYouTubeVideo(item.url, item.title);
+    });
+    li.querySelector('[data-action="remove"]').addEventListener("click", () => {
+      removeSavedVideo(item.id);
+    });
+    list.appendChild(li);
+  });
+}
+
+function renderLibraryList() {
+  const list = document.getElementById("libraryList");
+  const filterValue = document.getElementById("libraryFilter").value.trim();
+  const items = state.localLibrary.filter((item) =>
+    matchesFilter(item.displayName + " " + item.path, filterValue)
+  );
+  list.innerHTML = "";
+
+  if (!items.length) {
+    list.innerHTML = '<li class="empty-state">Add video or audio files you already own.</li>';
+    return;
+  }
+
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    const availability = item.available
+      ? "Available"
+      : "Unavailable — file may have moved or been deleted";
+    li.innerHTML =
+      '<div class="item-title">' + escapeHtml(item.displayName) + "</div>" +
+      '<div class="item-meta">' + escapeHtml(item.mediaType) + " · " + escapeHtml(availability) + "</div>" +
+      '<div class="item-meta">' + escapeHtml(item.path) + "</div>" +
+      '<div class="item-actions">' +
+      '<button type="button" data-action="play">Play</button>' +
+      '<button type="button" class="secondary" data-action="remove">Remove</button>' +
+      "</div>";
+
+    const playBtn = li.querySelector('[data-action="play"]');
+    playBtn.disabled = !item.available;
+    playBtn.addEventListener("click", () => openLocalMedia(item.id));
+    li.querySelector('[data-action="remove"]').addEventListener("click", () => {
+      removeLibraryItem(item.id);
+    });
+    list.appendChild(li);
+  });
+}
+
+function extractYouTubeVideoId(value) {
+  const input = String(value || "").trim();
+  if (!input) return null;
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+  try {
+    const url = input.startsWith("http://") || input.startsWith("https://")
+      ? new URL(input)
+      : new URL("https://" + input);
+    const host = url.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") {
+      const id = url.pathname.split("/").filter(Boolean)[0];
+      return id && /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+    }
+    if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
+      if (url.pathname === "/watch") {
+        const id = url.searchParams.get("v");
+        return id && /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+      }
+      const parts = url.pathname.split("/").filter(Boolean);
+      if (parts[0] === "embed" || parts[0] === "shorts" || parts[0] === "live") {
+        const id = parts[1];
+        return id && /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+      }
+    }
+  } catch (error) {
+    return null;
+  }
+  return null;
+}
+
+function showPlayerMessage(message, isError) {
+  document.getElementById("videoContainer").innerHTML =
+    '<div class="player-message' + (isError ? " error" : "") + '">' + escapeHtml(message) + "</div>";
+}
+
+function showYouTubeEmbed(videoId) {
+  document.getElementById("videoContainer").innerHTML =
+    '<iframe src="https://www.youtube.com/embed/' + encodeURIComponent(videoId) + '?rel=0" allowfullscreen></iframe>';
+}
+
+function showLocalPlayer(item) {
+  const streamUrl = API_BASE + "/library/" + encodeURIComponent(item.id) + "/stream";
+  if (item.mediaType === "audio") {
+    document.getElementById("videoContainer").innerHTML =
+      '<div class="player-message">' + escapeHtml(item.displayName) + '</div>' +
+      '<audio controls autoplay src="' + streamUrl + '"></audio>';
+    return;
+  }
+  document.getElementById("videoContainer").innerHTML =
+    '<video controls autoplay src="' + streamUrl + '"></video>';
+}
+
+async function recordSearch(query) {
+  await apiRequest(API_BASE + "/search-history", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query })
+  });
+}
+
+async function recordRecent(payload) {
+  await apiRequest(API_BASE + "/recent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+async function openSearch(query, options) {
+  const normalized = String(query || "").trim();
+  if (!normalized) return;
+
+  document.getElementById("searchBox").value = normalized;
+  currentInputValue = normalized;
+  showYouTubeSearch(normalized);
+  setStatus("");
+
+  try {
+    if (!options || !options.fromHistory) {
+      await recordSearch(normalized);
+    }
+    await recordRecent({ type: "search", query: normalized, title: normalized });
+    await loadState();
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+function showYouTubeSearch(query) {
+  document.getElementById("videoContainer").innerHTML =
+    '<iframe src="https://www.youtube.com/results?search_query=' + encodeURIComponent(query) + '" allowfullscreen></iframe>';
+}
+
+async function openYouTubeVideo(url, title) {
+  const videoId = extractYouTubeVideoId(url);
+  if (!videoId) {
+    setStatus("Enter a valid YouTube link.", true);
+    return;
+  }
+
+  const watchUrl = "https://www.youtube.com/watch?v=" + videoId;
+  document.getElementById("searchBox").value = watchUrl;
+  currentInputValue = watchUrl;
+  showYouTubeEmbed(videoId);
+  setStatus("");
+
+  try {
+    await recordRecent({
+      type: "youtube",
+      url: watchUrl,
+      title: title || ("YouTube Video " + videoId)
+    });
+    await loadState();
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+async function openFromSearchBox() {
+  const value = document.getElementById("searchBox").value.trim();
+  if (!value) return;
+
+  const videoId = extractYouTubeVideoId(value);
+  if (videoId) {
+    await openYouTubeVideo(value);
+    return;
+  }
+
+  await openSearch(value);
+}
+
+async function reopenRecent(item) {
+  if (!item) return;
+  if (item.type === "search") {
+    await openSearch(item.query, { fromHistory: true });
+    return;
+  }
+  if (item.type === "youtube") {
+    await openYouTubeVideo(item.url, item.title);
+    return;
+  }
+  if (item.type === "local") {
+    await openLocalMedia(item.libraryId);
+  }
+}
+
+async function saveCurrentVideo() {
+  const value = document.getElementById("searchBox").value.trim() || currentInputValue;
+  const videoId = extractYouTubeVideoId(value);
+  if (!videoId) {
+    setStatus("Open or paste a YouTube link before saving.", true);
+    return;
+  }
+
+  const defaultTitle = "YouTube Video " + videoId;
+  const titleInput = prompt("Optional title for this saved video:", defaultTitle);
+  if (titleInput === null) return;
+
+  try {
+    await apiRequest(API_BASE + "/saved-videos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: "https://www.youtube.com/watch?v=" + videoId,
+        title: titleInput.trim() || defaultTitle
+      })
+    });
+    await loadState();
+    setStatus("Video saved.");
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+async function removeSavedVideo(id) {
+  try {
+    await apiRequest(API_BASE + "/saved-videos/" + encodeURIComponent(id), { method: "DELETE" });
+    await loadState();
+    setStatus("Saved video removed.");
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+async function clearSearchHistory() {
+  if (!confirm("Clear all search history?")) return;
+  try {
+    await apiRequest(API_BASE + "/search-history", { method: "DELETE" });
+    await loadState();
+    setStatus("Search history cleared.");
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+function pickLocalFiles() {
+  document.getElementById("localFileInput").click();
+}
+
+async function handleLocalFileSelection(event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = "";
+
+  if (!files.length) return;
+
+  let added = 0;
+  let skipped = 0;
+
+  for (const file of files) {
+    if (!file.path) {
+      skipped += 1;
+      continue;
+    }
+    try {
+      await apiRequest(API_BASE + "/library", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: file.path, displayName: file.name })
+      });
+      added += 1;
+    } catch (error) {
+      skipped += 1;
+      setStatus(error.message, true);
+    }
+  }
+
+  await loadState();
+
+  if (added > 0) {
+    setStatus(added + " local file" + (added === 1 ? "" : "s") + " added to your library.");
+  } else if (skipped > 0) {
+    setStatus("Could not add the selected files. Open MTube inside MBrowser to add local files with full paths.", true);
+  }
+}
+
+async function openLocalMedia(id) {
+  const item = state.localLibrary.find((entry) => entry.id === id);
+  if (!item) {
+    setStatus("Local media item not found.", true);
+    return;
+  }
+  if (!item.available) {
+    showPlayerMessage("This file is unavailable. It may have been moved, renamed, or deleted. Check the path in your Local Library list.", true);
+    setStatus("Local file unavailable.", true);
+    return;
+  }
+
+  showLocalPlayer(item);
+  setStatus("Playing local media.");
+
+  try {
+    await recordRecent({
+      type: "local",
+      libraryId: item.id,
+      title: item.displayName
+    });
+    await loadState();
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+async function removeLibraryItem(id) {
+  try {
+    await apiRequest(API_BASE + "/library/" + encodeURIComponent(id), { method: "DELETE" });
+    await loadState();
+    setStatus("Local media removed from library.");
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+loadState().catch((error) => {
+  setStatus(error.message || "Could not connect to the MTube server.", true);
+});
 </script>
+
 </body>
 </html>

@@ -3,6 +3,7 @@ node_modules/
 maildb.json
 mpaydb.json
 mnotes.json
+mtubedb.json
 
 dist/
 out/
