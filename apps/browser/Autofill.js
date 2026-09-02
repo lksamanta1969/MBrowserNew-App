@@ -2,6 +2,7 @@
  * MBrowser Autofill Engine (Phase 1E-C.1 / 1E-C.2)
  * C.1: form detection + WebView integration.
  * C.2 step 1: privacy gating + safe origin-scoped credential lookup (no fill/UI yet).
+ * C.2 step 2: autofill offer UI (no credential filling yet).
  */
 
 const Autofill = (function () {
@@ -24,6 +25,7 @@ const Autofill = (function () {
   let activePageUrl = "";
   let offerToAutofill = true;
   let neverSaveOrigins = new Set();
+  let activeOffer = null;
 
   function ensureApi() {
     const bridge = window.electronAPI || null;
@@ -58,6 +60,119 @@ const Autofill = (function () {
     if (!raw || raw === "null") return "";
     if (/^(file|about|chrome|edge|data|blob|javascript):/i.test(raw)) return "";
     return originFromUrl(raw) || (isEligibleUrl(raw) ? raw : "");
+  }
+
+  function escapeAttr(text) {
+    return String(text || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function displayHostname(originOrUrl) {
+    const value = normalizeOriginValue(originOrUrl) || String(originOrUrl || "").trim();
+    if (!value) return "this site";
+    try {
+      return new URL(value).hostname || "this site";
+    } catch (e) {
+      return "this site";
+    }
+  }
+
+  function hideOfferPrompt() {
+    const prompt = document.getElementById("afOfferPrompt");
+    if (prompt) prompt.classList.remove("open");
+    activeOffer = null;
+    const fillBtn = document.getElementById("afOfferFillBtn");
+    if (fillBtn) fillBtn.disabled = true;
+  }
+
+  function setFillButtonEnabled(enabled) {
+    const fillBtn = document.getElementById("afOfferFillBtn");
+    if (fillBtn) fillBtn.disabled = !enabled;
+  }
+
+  function selectOfferCandidate(candidateId) {
+    if (!activeOffer) return;
+    activeOffer.selectedId = candidateId;
+    const picker = document.getElementById("afOfferPicker");
+    if (!picker) return;
+    picker.querySelectorAll(".af-offer-user-btn").forEach((btn) => {
+      btn.classList.toggle("selected", btn.getAttribute("data-id") === candidateId);
+    });
+    setFillButtonEnabled(!!candidateId);
+  }
+
+  function renderOfferPicker(candidates) {
+    const picker = document.getElementById("afOfferPicker");
+    if (!picker) return;
+    picker.hidden = false;
+    picker.innerHTML = candidates
+      .map(
+        (candidate) =>
+          `<button type="button" class="af-offer-user-btn" data-id="${escapeAttr(candidate.id)}">${escapeAttr(candidate.username)}</button>`
+      )
+      .join("");
+    picker.querySelectorAll(".af-offer-user-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectOfferCandidate(btn.getAttribute("data-id"));
+      });
+    });
+  }
+
+  function showOfferPrompt(candidates, pageOrigin, pageUrl) {
+    if (!candidates || !candidates.length) {
+      hideOfferPrompt();
+      return;
+    }
+
+    const prompt = document.getElementById("afOfferPrompt");
+    const titleEl = document.getElementById("afOfferTitle");
+    const userEl = document.getElementById("afOfferUser");
+    const picker = document.getElementById("afOfferPicker");
+    if (!prompt || !titleEl || !userEl || !picker) return;
+
+    hideOfferPrompt();
+
+    const hostLabel = displayHostname(pageOrigin || pageUrl);
+    titleEl.innerHTML = "Fill password for <strong>" + escapeAttr(hostLabel) + "</strong>?";
+
+    activeOffer = {
+      candidates: candidates.map((candidate) => ({
+        id: candidate.id,
+        username: String(candidate.username || ""),
+        origin: candidate.origin
+      })),
+      selectedId: "",
+      origin: normalizeOriginValue(pageOrigin || pageUrl)
+    };
+
+    if (candidates.length === 1) {
+      picker.hidden = true;
+      picker.innerHTML = "";
+      userEl.textContent = candidates[0].username || "";
+      userEl.hidden = false;
+      activeOffer.selectedId = candidates[0].id;
+      setFillButtonEnabled(true);
+    } else {
+      userEl.textContent = "Choose an account:";
+      userEl.hidden = false;
+      renderOfferPicker(activeOffer.candidates);
+      setFillButtonEnabled(false);
+    }
+
+    prompt.classList.add("open");
+  }
+
+  function dismissOffer() {
+    hideOfferPrompt();
+  }
+
+  function fillSelected() {
+    if (!activeOffer || !activeOffer.selectedId) return;
+    console.log("[Autofill] Fill requested");
+    hideOfferPrompt();
   }
 
   function isInternalAppUrl(url) {
@@ -211,9 +326,17 @@ const Autofill = (function () {
     console.log("[Autofill] Form detected");
 
     const offer = await evaluateDetectionOffer(result);
-    if (!offer.allowed || !offer.candidates.length) return;
+    if (!offer.allowed || !offer.candidates.length) {
+      hideOfferPrompt();
+      return;
+    }
 
     console.log("[Autofill] Offer candidates:", offer.candidates.length);
+    showOfferPrompt(
+      offer.candidates,
+      normalizeOriginValue(result.origin || result.url),
+      result.url || result.origin
+    );
   }
 
   async function pollGuestStatus() {
@@ -247,6 +370,7 @@ const Autofill = (function () {
     if (!shouldRunDetection(currentUrl)) {
       await cleanupGuest();
       lastReportedSignature = "";
+      hideOfferPrompt();
       return;
     }
 
@@ -281,6 +405,7 @@ const Autofill = (function () {
 
   async function onNavigation(url) {
     lastReportedSignature = "";
+    hideOfferPrompt();
     await cleanupGuest();
     scheduleInject();
   }
@@ -332,6 +457,9 @@ const Autofill = (function () {
     normalizeOriginValue,
     canOfferAutofill,
     lookupOfferCandidates,
+    showOfferPrompt,
+    dismissOffer,
+    fillSelected,
     isInternalAppUrl,
     INTERNAL_APP_PREFIXES
   };

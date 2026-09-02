@@ -1362,3 +1362,43 @@ body[data-theme="dark"] .ld-prompt-title{ color: #f9fafb; }
 body[data-theme="dark"] .ld-prompt-user{ color: #9ca3af; }
 body[data-theme="dark"] .ld-prompt-actions button{ background: #374151; color: #e5e7eb; }
 body[data-theme="dark"] .ld-prompt-actions button.primary{ background: #d97706; color: #111827; }
+
+/* ===== Autofill Offer Prompt (Phase 1E-C.2) ===== */
+.af-prompt.open{ display: flex; }
+.af-offer-picker{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+.af-offer-picker[hidden]{ display: none !important; }
+.af-offer-user-btn{
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #374151;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.af-offer-user-btn.selected{
+    border-color: #b45309;
+    background: #fff7ed;
+    color: #92400e;
+}
+body[data-theme="dark"] .af-offer-user-btn{
+    background: #374151;
+    border-color: #4b5563;
+    color: #e5e7eb;
+}
+body[data-theme="dark"] .af-offer-user-btn.selected{
+    border-color: #d97706;
+    background: #422006;
+    color: #fde68a;
+}

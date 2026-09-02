@@ -79,6 +79,21 @@
   </div>
 </div>
 
+<div id="afOfferPrompt" class="ld-prompt af-prompt" role="status" aria-live="polite">
+  <div class="ld-prompt-card">
+    <div class="ld-prompt-copy">
+      <div id="afOfferTitle" class="ld-prompt-title">Fill password?</div>
+      <div id="afOfferUser" class="ld-prompt-user"></div>
+      <div id="afOfferPicker" class="af-offer-picker" hidden></div>
+    </div>
+    <div class="ld-prompt-actions">
+      <button id="afOfferFillBtn" type="button" class="primary" onclick="Autofill.fillSelected()" disabled>Fill</button>
+      <button type="button" onclick="Autofill.dismissOffer()">Cancel</button>
+      <button type="button" class="ld-prompt-close" onclick="Autofill.dismissOffer()" title="Close">✕</button>
+    </div>
+  </div>
+</div>
+
 <script id="browser-webview-mount">
   (function () {
     var webview = document.createElement("webview");
