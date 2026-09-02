@@ -131,14 +131,18 @@ const Settings = (function () {
 
   function applyPlaceholders() {
     const provider = get("searchEngine.provider", "google");
-    const label =
+    const urlLabel =
       provider === "custom"
         ? "Search or Enter URL"
-        : "Search " + provider.charAt(0).toUpperCase() + provider.slice(1) + " or Enter URL";
+        : "Search MBrowser or Enter URL";
+    const homeLabel =
+      provider === "custom"
+        ? "Search or Enter URL"
+        : "Search MBrowser or type a URL";
     const url = document.getElementById("url");
     const home = document.getElementById("homesearch");
-    if (url) url.placeholder = label;
-    if (home) home.placeholder = label;
+    if (url) url.placeholder = urlLabel;
+    if (home) home.placeholder = homeLabel;
   }
 
   function applyBrowserTitle() {
