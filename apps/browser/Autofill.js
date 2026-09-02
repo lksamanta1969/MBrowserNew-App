@@ -1,6 +1,7 @@
 /**
- * MBrowser Autofill Engine (Phase 1E-C.1)
- * Form detection + WebView integration only. No vault access, fill, or popup.
+ * MBrowser Autofill Engine (Phase 1E-C.1 / 1E-C.2)
+ * C.1: form detection + WebView integration.
+ * C.2 step 1: privacy gating + safe origin-scoped credential lookup (no fill/UI yet).
  */
 
 const Autofill = (function () {
@@ -21,6 +22,16 @@ const Autofill = (function () {
   let injectTimer = null;
   let lastReportedSignature = "";
   let activePageUrl = "";
+  let offerToAutofill = true;
+  let neverSaveOrigins = new Set();
+
+  function ensureApi() {
+    const bridge = window.electronAPI || null;
+    if (!bridge || typeof bridge.passwordsGet !== "function") {
+      return null;
+    }
+    return bridge;
+  }
 
   function isEligibleUrl(url) {
     try {
@@ -29,6 +40,24 @@ const Autofill = (function () {
     } catch (e) {
       return false;
     }
+  }
+
+  function originFromUrl(url) {
+    if (!isEligibleUrl(url)) return "";
+    try {
+      const parsed = new URL(url);
+      if (parsed.origin && parsed.origin !== "null") return parsed.origin;
+      return "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function normalizeOriginValue(value) {
+    const raw = String(value || "").trim();
+    if (!raw || raw === "null") return "";
+    if (/^(file|about|chrome|edge|data|blob|javascript):/i.test(raw)) return "";
+    return originFromUrl(raw) || (isEligibleUrl(raw) ? raw : "");
   }
 
   function isInternalAppUrl(url) {
@@ -50,6 +79,28 @@ const Autofill = (function () {
     }
   }
 
+  async function refreshSettingsFlags() {
+    const bridge = window.electronAPI || null;
+    if (!bridge || typeof bridge.settingsGet !== "function") {
+      offerToAutofill = true;
+      return;
+    }
+    const result = await bridge.settingsGet();
+    const privacy = (result && result.data && result.data.privacy) || {};
+    offerToAutofill = privacy.offerToAutofillPasswords !== false;
+  }
+
+  async function refreshNeverSave() {
+    const bridge = window.electronAPI || null;
+    if (!bridge || typeof bridge.neverSaveGet !== "function") {
+      neverSaveOrigins = new Set();
+      return;
+    }
+    const result = await bridge.neverSaveGet();
+    const origins = (result && result.data && result.data.origins) || [];
+    neverSaveOrigins = new Set(origins.map((item) => normalizeOriginValue(item)));
+  }
+
   function shouldRunDetection(url) {
     if (!webview) return false;
     if (isHomeVisible()) return false;
@@ -57,6 +108,43 @@ const Autofill = (function () {
     if (!isEligibleUrl(url)) return false;
     if (isInternalAppUrl(url)) return false;
     return true;
+  }
+
+  async function canOfferAutofill(urlOrOrigin) {
+    await refreshSettingsFlags();
+    if (!offerToAutofill) return false;
+    if (!isEligibleUrl(urlOrOrigin) && !normalizeOriginValue(urlOrOrigin)) return false;
+    if (isInternalAppUrl(urlOrOrigin)) return false;
+    const origin = normalizeOriginValue(urlOrOrigin);
+    if (!origin) return false;
+    await refreshNeverSave();
+    if (neverSaveOrigins.has(origin)) return false;
+    return true;
+  }
+
+  function toOfferCandidate(entry, fallbackOrigin) {
+    return {
+      id: entry.id,
+      username: String(entry.username || ""),
+      origin: normalizeOriginValue(entry.origin || entry.url) || fallbackOrigin
+    };
+  }
+
+  async function lookupOfferCandidates(urlOrOrigin) {
+    const origin = normalizeOriginValue(urlOrOrigin);
+    if (!origin) return [];
+
+    const bridge = ensureApi();
+    if (!bridge) return [];
+
+    const result = await bridge.passwordsGet();
+    const entries = (result && result.data && result.data.entries) || [];
+    return entries
+      .filter((entry) => {
+        const entryOrigin = normalizeOriginValue(entry.origin || entry.url);
+        return entryOrigin && entryOrigin === origin;
+      })
+      .map((entry) => toOfferCandidate(entry, origin));
   }
 
   function buildInjectSource() {
@@ -85,7 +173,22 @@ const Autofill = (function () {
     }
   }
 
-  function handleDetectionResult(result) {
+  async function evaluateDetectionOffer(result) {
+    if (!result || !result.hasLoginForm) {
+      return { allowed: false, candidates: [] };
+    }
+
+    const pageOrigin = normalizeOriginValue(result.origin || result.url);
+    const allowed = await canOfferAutofill(pageOrigin || result.url || result.origin);
+    if (!allowed) {
+      return { allowed: false, candidates: [] };
+    }
+
+    const candidates = await lookupOfferCandidates(pageOrigin);
+    return { allowed: true, candidates };
+  }
+
+  async function handleDetectionResult(result) {
     if (!result || !result.hasLoginForm) {
       if (!result || !result.hasPasswordField) {
         lastReportedSignature = "";
@@ -106,6 +209,11 @@ const Autofill = (function () {
     if (signature === lastReportedSignature) return;
     lastReportedSignature = signature;
     console.log("[Autofill] Form detected");
+
+    const offer = await evaluateDetectionOffer(result);
+    if (!offer.allowed || !offer.candidates.length) return;
+
+    console.log("[Autofill] Offer candidates:", offer.candidates.length);
   }
 
   async function pollGuestStatus() {
@@ -118,7 +226,7 @@ const Autofill = (function () {
         })()`,
         true
       );
-      if (result) handleDetectionResult(result);
+      if (result) await handleDetectionResult(result);
     } catch (e) {
       /* cross-origin or destroyed guest */
     }
@@ -147,7 +255,7 @@ const Autofill = (function () {
 
     try {
       const initial = await webview.executeJavaScript(source, true);
-      if (initial) handleDetectionResult(initial);
+      if (initial) await handleDetectionResult(initial);
 
       let guestUrl = "";
       try {
@@ -211,12 +319,19 @@ const Autofill = (function () {
     });
   }
 
-  function init() {
+  async function init() {
+    await refreshSettingsFlags();
+    await refreshNeverSave();
     bindWebview();
   }
 
   return {
     init,
+    refreshSettingsFlags,
+    refreshNeverSave,
+    normalizeOriginValue,
+    canOfferAutofill,
+    lookupOfferCandidates,
     isInternalAppUrl,
     INTERNAL_APP_PREFIXES
   };

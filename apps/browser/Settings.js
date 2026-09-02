@@ -262,7 +262,7 @@ const Settings = (function () {
       startup: "startup session restore homepage",
       search: "search engine google bing duckduckgo yahoo custom",
       downloads: "download folder ask open notifications",
-      privacy: "clear history cache cookies do not track safe browsing password save login detection",
+      privacy: "clear history cache cookies do not track safe browsing password save login detection autofill",
       bookmarks: "bookmark bar import export",
       history: "retention max entries cleanup",
       mdrive: "workspace sync folder",
@@ -474,6 +474,11 @@ const Settings = (function () {
         "Detect login forms and successful sign-ins"
       ) +
       fieldRow(
+        "Offer to autofill passwords",
+        `<label class="settings-switch"><input id="setOfferAutofillPasswords" type="checkbox"${get("privacy.offerToAutofillPasswords", true) ? " checked" : ""}><span></span></label>`,
+        "Offer saved passwords on matching login forms"
+      ) +
+      fieldRow(
         "Safe Browsing",
         `<label class="settings-switch"><input id="setSafeBrowsing" type="checkbox"${get("privacy.safeBrowsing") ? " checked" : ""} disabled><span></span></label>`,
         "Placeholder for a future Safe Browsing integration"
@@ -657,6 +662,7 @@ const Settings = (function () {
       bindAuto("setDnt", (el) => ({ privacy: { doNotTrack: !!el.checked } }));
       bindAuto("setOfferSavePasswords", (el) => ({ privacy: { offerToSavePasswords: !!el.checked } }));
       bindAuto("setEnableLoginDetection", (el) => ({ privacy: { enableLoginDetection: !!el.checked } }));
+      bindAuto("setOfferAutofillPasswords", (el) => ({ privacy: { offerToAutofillPasswords: !!el.checked } }));
       ["setOfferSavePasswords", "setEnableLoginDetection"].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -666,6 +672,14 @@ const Settings = (function () {
           }
         });
       });
+      const offerAutofillEl = document.getElementById("setOfferAutofillPasswords");
+      if (offerAutofillEl) {
+        offerAutofillEl.addEventListener("change", () => {
+          if (window.Autofill && typeof Autofill.refreshSettingsFlags === "function") {
+            Autofill.refreshSettingsFlags();
+          }
+        });
+      }
       const map = [
         ["setClearHistory", "history", "Clear all browsing history?"],
         ["setClearCache", "cache", "Clear cached files?"],
