@@ -189,6 +189,9 @@ window.onload = async function(){
     if (window.LoginDetection) {
         LoginDetection.init();
     }
+    if (window.Autofill) {
+        Autofill.init();
+    }
 }
 document.addEventListener("DOMContentLoaded", () => {
     if (window.BrowserTab) {

@@ -176,6 +176,14 @@ contextBridge.exposeInMainWorld(
       } catch (e) {
         /* not running inside a <webview> guest */
       }
+    },
+
+    reportAutofillFormDetected: (payload) => {
+      try {
+        ipcRenderer.sendToHost("af:form-detected", payload);
+      } catch (e) {
+        /* not running inside a <webview> guest */
+      }
     }
   }
 );
