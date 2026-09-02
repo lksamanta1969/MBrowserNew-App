@@ -65,7 +65,7 @@ function openApp(appName) {
     browser.style.display = "flex";
     onHomePage = false;
 
-    const appUrl = "http://localhost:3000/apps/" + appName + "/index.html";
+    const appUrl = "http://localhost:3000/apps/" + appName + "/index.html?v=" + Date.now();
 
     browser.src = appUrl;
 
