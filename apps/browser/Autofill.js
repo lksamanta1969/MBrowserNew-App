@@ -3,6 +3,7 @@
  * C.1: form detection + WebView integration.
  * C.2 step 1: privacy gating + safe origin-scoped credential lookup (no fill/UI yet).
  * C.2 step 2: autofill offer UI (no credential filling yet).
+ * C.2 step 3: user-confirmed credential fill (no auto-fill, no auto-submit).
  */
 
 const Autofill = (function () {
@@ -169,10 +170,92 @@ const Autofill = (function () {
     hideOfferPrompt();
   }
 
-  function fillSelected() {
-    if (!activeOffer || !activeOffer.selectedId) return;
+  async function lookupCredentialForFill(id, pageOrigin) {
+    const bridge = ensureApi();
+    if (!bridge || !id || !pageOrigin) return null;
+
+    const result = await bridge.passwordsGet();
+    const entries = (result && result.data && result.data.entries) || [];
+    const entry = entries.find((item) => {
+      if (item.id !== id) return false;
+      const entryOrigin = normalizeOriginValue(item.origin || item.url);
+      return entryOrigin && entryOrigin === pageOrigin;
+    });
+    if (!entry) return null;
+
+    return {
+      username: String(entry.username || ""),
+      password: String(entry.password || "")
+    };
+  }
+
+  async function invokeGuestFill(credential) {
+    if (!webview || !credential) {
+      return { ok: false, filledUsername: false, filledPassword: false };
+    }
+
+    const payload = JSON.stringify({
+      username: credential.username,
+      password: credential.password
+    });
+
+    try {
+      return await webview.executeJavaScript(
+        `(function(){
+          if (!window.__MB_AF || typeof window.__MB_AF.applyFill !== "function") {
+            return { ok: false, filledUsername: false, filledPassword: false };
+          }
+          return window.__MB_AF.applyFill(${payload});
+        })()`,
+        true
+      );
+    } catch (e) {
+      return { ok: false, filledUsername: false, filledPassword: false };
+    }
+  }
+
+  async function fillSelected() {
+    if (!activeOffer || !activeOffer.selectedId || !webview) return;
+
+    const selectedId = activeOffer.selectedId;
+    const offerOrigin = activeOffer.origin;
     console.log("[Autofill] Fill requested");
-    hideOfferPrompt();
+
+    let currentUrl = "";
+    try {
+      currentUrl = webview.getURL ? webview.getURL() : "";
+    } catch (e) {
+      console.log("[Autofill] Fill failed");
+      return;
+    }
+
+    const pageOrigin = normalizeOriginValue(currentUrl);
+    if (!pageOrigin || !offerOrigin || pageOrigin !== offerOrigin) {
+      console.log("[Autofill] Fill failed");
+      return;
+    }
+
+    if (!(await canOfferAutofill(currentUrl))) {
+      console.log("[Autofill] Fill failed");
+      return;
+    }
+
+    let credential = await lookupCredentialForFill(selectedId, pageOrigin);
+    if (!credential || !credential.password) {
+      console.log("[Autofill] Fill failed");
+      return;
+    }
+
+    const fillResult = await invokeGuestFill(credential);
+    credential = null;
+
+    if (fillResult && fillResult.ok) {
+      console.log("[Autofill] Filled");
+      hideOfferPrompt();
+      return;
+    }
+
+    console.log("[Autofill] Fill failed");
   }
 
   function isInternalAppUrl(url) {

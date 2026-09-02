@@ -1,6 +1,6 @@
 /**
- * MBrowser Autofill — guest-page injection script builder (Phase 1E-C.1)
- * Produces a self-contained IIFE for window.__MB_AF (detection only).
+ * MBrowser Autofill — guest-page injection script builder (Phase 1E-C.1 / 1E-C.2)
+ * Produces a self-contained IIFE for window.__MB_AF (detection + user-confirmed fill).
  */
 
 const AutofillInject = (function () {
@@ -196,6 +196,42 @@ const AutofillInject = (function () {
 
         getStatus() {
           return this.scan(false);
+        },
+
+        setInputValue(input, value) {
+          if (!input) return false;
+          input.value = value;
+          try {
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+          } catch (e) { /* ignore */ }
+          return true;
+        },
+
+        applyFill(creds) {
+          const username = creds && creds.username != null ? String(creds.username) : "";
+          const password = creds && creds.password != null ? String(creds.password) : "";
+          const passwords = this.findPasswordInputs(document);
+          if (!passwords.length || !password) {
+            return { ok: false, filledUsername: false, filledPassword: false };
+          }
+
+          const passwordInput = passwords[0];
+          const usernameInput = this.findUsernameField(passwordInput);
+          let filledUsername = false;
+          let filledPassword = false;
+
+          if (usernameInput && username) {
+            filledUsername = this.setInputValue(usernameInput, username);
+          }
+          if (password) {
+            filledPassword = this.setInputValue(passwordInput, password);
+          }
+
+          const needsUsername = !!(usernameInput && username);
+          const ok = filledPassword && (!needsUsername || filledUsername);
+
+          return { ok: ok, filledUsername: filledUsername, filledPassword: filledPassword };
         },
 
         startObserver() {
