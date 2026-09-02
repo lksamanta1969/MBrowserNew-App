@@ -23,6 +23,15 @@ function createWindow() {
 }  
   });
 
+  win.webContents.on("will-attach-webview", (_event, webPreferences, params) => {
+    webPreferences.preload = path.join(__dirname, "preload.js");
+    webPreferences.contextIsolation = true;
+    webPreferences.sandbox = false;
+    if (params && "preload" in params) {
+      delete params.preload;
+    }
+  });
+
   win.loadFile("index.html");
 
   // Securely handle popups/new windows created by the webview (e.g., Firebase Auth Login)
@@ -1094,7 +1103,9 @@ function defaultSettingsData() {
         },
         privacy: {
             doNotTrack: false,
-            safeBrowsing: false
+            safeBrowsing: false,
+            offerToSavePasswords: true,
+            enableLoginDetection: true
         },
         bookmarks: {
             showBookmarksBar: true
@@ -1766,10 +1777,13 @@ function writePasswordsStore(data) {
 
 function derivePasswordOrigin(urlOrOrigin) {
     const raw = String(urlOrOrigin || "").trim();
-    if (!raw) return "";
+    if (!raw || raw === "null") return "";
     try {
         const withProto = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(raw) ? raw : "https://" + raw;
-        return new URL(withProto).origin;
+        const parsed = new URL(withProto);
+        if (parsed.protocol === "file:") return "file://";
+        if (parsed.origin && parsed.origin !== "null") return parsed.origin;
+        return "";
     } catch (e) {
         return raw;
     }
@@ -1895,6 +1909,109 @@ ipcMain.handle("clipboard:write-text", async (_event, text) => {
     try {
         clipboard.writeText(String(text || ""));
         return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+/* ===================== Never-Save domains (Phase 1E-B) ===================== */
+
+function neverSaveFilePath() {
+    return path.join(app.getPath("userData"), "neverSave.json");
+}
+
+function defaultNeverSaveData() {
+    return {
+        version: 1,
+        origins: []
+    };
+}
+
+function readNeverSaveStore() {
+    const filePath = neverSaveFilePath();
+
+    if (!fs.existsSync(filePath)) {
+        const data = defaultNeverSaveData();
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+        return data;
+    }
+
+    try {
+        const raw = fs.readFileSync(filePath, "utf8");
+        const data = JSON.parse(raw || "{}");
+        if (!Array.isArray(data.origins)) return defaultNeverSaveData();
+        return { version: data.version || 1, origins: data.origins.map(String) };
+    } catch (error) {
+        console.error("[NEVER-SAVE] Failed to read store:", error);
+        return defaultNeverSaveData();
+    }
+}
+
+function writeNeverSaveStore(data) {
+    const filePath = neverSaveFilePath();
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+}
+
+function normalizeNeverSaveOrigin(origin) {
+    const raw = String(origin || "").trim();
+    if (!raw || raw === "null") return "";
+    try {
+        const withProto = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(raw) ? raw : "https://" + raw;
+        const parsed = new URL(withProto);
+        if (parsed.protocol === "file:") return "file://";
+        if (parsed.origin && parsed.origin !== "null") return parsed.origin;
+        return "";
+    } catch (e) {
+        return raw.replace(/\/$/, "");
+    }
+}
+
+ipcMain.handle("never-save:get", async () => {
+    try {
+        return { success: true, data: readNeverSaveStore() };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("never-save:add", async (event, origin) => {
+    try {
+        const normalized = normalizeNeverSaveOrigin(origin);
+        if (!normalized) return { success: false, error: "Origin is required." };
+
+        const data = readNeverSaveStore();
+        if (!data.origins.includes(normalized)) {
+            data.origins.push(normalized);
+            writeNeverSaveStore(data);
+        }
+        return { success: true, data, origin: normalized };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("never-save:remove", async (event, origin) => {
+    try {
+        const normalized = normalizeNeverSaveOrigin(origin);
+        if (!normalized) return { success: false, error: "Origin is required." };
+
+        const data = readNeverSaveStore();
+        const before = data.origins.length;
+        data.origins = data.origins.filter((item) => item !== normalized);
+        writeNeverSaveStore(data);
+        return { success: true, data, deletedCount: before - data.origins.length };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("never-save:has", async (event, origin) => {
+    try {
+        const normalized = normalizeNeverSaveOrigin(origin);
+        const data = readNeverSaveStore();
+        return { success: true, blocked: data.origins.includes(normalized), origin: normalized };
     } catch (error) {
         return { success: false, error: error.message };
     }

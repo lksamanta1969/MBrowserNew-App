@@ -1282,3 +1282,83 @@ body[data-theme="dark"] .settings-manager-main h3{ color: #fde68a; }
     font-weight: 600;
     cursor: pointer;
 }
+
+/* ===== Login Detection Prompt ===== */
+.ld-prompt{
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 24px;
+    z-index: 1000001;
+    pointer-events: none;
+    justify-content: center;
+    padding: 0 16px;
+}
+.ld-prompt.open{ display: flex; }
+.ld-prompt-card{
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: min(720px, 100%);
+    background: #fff;
+    color: #1f2937;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+    padding: 14px 16px;
+}
+.ld-prompt-copy{ min-width: 0; flex: 1; }
+.ld-prompt-title{
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+}
+.ld-prompt-title strong{ color: #92400e; }
+.ld-prompt-user{
+    margin-top: 2px;
+    font-size: 12px;
+    color: #6b7280;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ld-prompt-actions{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.ld-prompt-actions button{
+    height: 34px;
+    border: none;
+    border-radius: 8px;
+    padding: 0 12px;
+    background: #e5e7eb;
+    color: #374151;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+}
+.ld-prompt-actions button.primary{
+    background: #b45309;
+    color: #fff;
+}
+.ld-prompt-actions button.ld-prompt-close{
+    min-width: 34px;
+    padding: 0;
+    background: transparent;
+    color: #6b7280;
+    font-size: 16px;
+}
+body[data-theme="dark"] .ld-prompt-card{
+    background: #1f2937;
+    border-color: #374151;
+    color: #f3f4f6;
+}
+body[data-theme="dark"] .ld-prompt-title{ color: #f9fafb; }
+body[data-theme="dark"] .ld-prompt-user{ color: #9ca3af; }
+body[data-theme="dark"] .ld-prompt-actions button{ background: #374151; color: #e5e7eb; }
+body[data-theme="dark"] .ld-prompt-actions button.primary{ background: #d97706; color: #111827; }

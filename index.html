@@ -53,11 +53,42 @@
     <button id="googleBtn" onclick="googleLogin()">Sign in with Google</button>
   </div>
 
-<webview
-    id="browser"
-    src=""
-    preload="file:///C:/Users/L.K. SAMANTA/Desktop/MBrowser/preload.js">
-</webview>
+<div id="ldSavePrompt" class="ld-prompt" role="status" aria-live="polite">
+  <div class="ld-prompt-card">
+    <div class="ld-prompt-copy">
+      <div id="ldSaveText" class="ld-prompt-title">Save password?</div>
+      <div id="ldSaveUser" class="ld-prompt-user"></div>
+    </div>
+    <div class="ld-prompt-actions">
+      <button type="button" class="primary" onclick="LoginDetection.saveCandidate()">Save</button>
+      <button type="button" onclick="LoginDetection.neverSaveCandidate()">Never</button>
+      <button type="button" class="ld-prompt-close" onclick="LoginDetection.dismissPrompt()" title="Close">✕</button>
+    </div>
+  </div>
+</div>
+
+<div id="ldUpdatePrompt" class="ld-prompt" role="status" aria-live="polite">
+  <div class="ld-prompt-card">
+    <div class="ld-prompt-copy">
+      <div id="ldUpdateText" class="ld-prompt-title">Update password?</div>
+    </div>
+    <div class="ld-prompt-actions">
+      <button type="button" class="primary" onclick="LoginDetection.updateCandidate()">Update</button>
+      <button type="button" onclick="LoginDetection.cancelUpdate()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script id="browser-webview-mount">
+  (function () {
+    var webview = document.createElement("webview");
+    webview.id = "browser";
+    var mount = document.getElementById("browser-webview-mount");
+    if (mount && mount.parentNode) {
+      mount.parentNode.insertBefore(webview, mount);
+    }
+  })();
+</script>
 
 <!-- Bookmark Manager -->
 <div id="bookmarkManager" class="bm-manager" role="dialog" aria-modal="true" aria-labelledby="bmManagerTitle">
@@ -245,6 +276,7 @@
  <script src="apps/browser/History.js"></script>
  <script src="apps/browser/Downloads.js"></script>
  <script src="apps/browser/Passwords.js"></script>
+ <script src="apps/browser/LoginDetection.js"></script>
  <script src="apps/browser/browser.js"></script>
 
 <script type="module">

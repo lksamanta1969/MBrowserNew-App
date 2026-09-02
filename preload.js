@@ -1,8 +1,14 @@
 const { contextBridge, ipcRenderer } = require("electron");
+const path = require("path");
+const { pathToFileURL } = require("url");
+
+const webviewPreloadPath = pathToFileURL(path.join(__dirname, "preload.js")).href;
 
 contextBridge.exposeInMainWorld(
   "electronAPI",
   {
+    webviewPreloadPath,
+
     saveFile: (file, folderName) => {
       const filePath = file && file.path;
       if (!filePath) {
@@ -150,6 +156,26 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke("passwords:clear"),
 
     clipboardWriteText: (text) =>
-      ipcRenderer.invoke("clipboard:write-text", text)
+      ipcRenderer.invoke("clipboard:write-text", text),
+
+    neverSaveGet: () =>
+      ipcRenderer.invoke("never-save:get"),
+
+    neverSaveAdd: (origin) =>
+      ipcRenderer.invoke("never-save:add", origin),
+
+    neverSaveRemove: (origin) =>
+      ipcRenderer.invoke("never-save:remove", origin),
+
+    neverSaveHas: (origin) =>
+      ipcRenderer.invoke("never-save:has", origin),
+
+    reportLoginPending: (payload) => {
+      try {
+        ipcRenderer.sendToHost("ld:pending", payload);
+      } catch (e) {
+        /* not running inside a <webview> guest */
+      }
+    }
   }
 );

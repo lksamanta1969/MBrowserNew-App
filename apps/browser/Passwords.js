@@ -35,6 +35,16 @@ const Passwords = (function () {
     renderManager();
   }
 
+  function applyExternalData(data) {
+    applyStore(data);
+  }
+
+  async function refresh() {
+    await refreshStore();
+    renderManager();
+    return store;
+  }
+
   function escapeAttr(text) {
     return String(text || "")
       .replace(/&/g, "&amp;")
@@ -339,7 +349,9 @@ const Passwords = (function () {
     saveForm,
     deleteFromForm,
     toggleFormPasswordVisibility,
-    clearAll
+    clearAll,
+    applyExternalData,
+    refresh
   };
 })();
 
