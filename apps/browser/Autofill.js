@@ -4,6 +4,7 @@
  * C.2 step 1: privacy gating + safe origin-scoped credential lookup (no fill/UI yet).
  * C.2 step 2: autofill offer UI (no credential filling yet).
  * C.2 step 3: user-confirmed credential fill (no auto-fill, no auto-submit).
+ * C.2 step 4: post-fill lifecycle suppression (no duplicate offers/reports until navigation).
  */
 
 const Autofill = (function () {
@@ -27,6 +28,8 @@ const Autofill = (function () {
   let offerToAutofill = true;
   let neverSaveOrigins = new Set();
   let activeOffer = null;
+  /** True after successful explicit Fill until the next navigation/guest cleanup. */
+  let lifecycleOfferSuppressed = false;
 
   function ensureApi() {
     const bridge = window.electronAPI || null;
@@ -251,6 +254,7 @@ const Autofill = (function () {
 
     if (fillResult && fillResult.ok) {
       console.log("[Autofill] Filled");
+      lifecycleOfferSuppressed = true;
       hideOfferPrompt();
       return;
     }
@@ -394,6 +398,10 @@ const Autofill = (function () {
       return;
     }
 
+    if (lifecycleOfferSuppressed) {
+      return;
+    }
+
     const signature = [
       result.origin || "",
       result.url || "",
@@ -488,6 +496,7 @@ const Autofill = (function () {
 
   async function onNavigation(url) {
     lastReportedSignature = "";
+    lifecycleOfferSuppressed = false;
     hideOfferPrompt();
     await cleanupGuest();
     scheduleInject();

@@ -17,6 +17,7 @@ const AutofillInject = (function () {
         lastSignature: "",
         observer: null,
         debounceTimer: null,
+        reportingSuppressed: false,
 
         cleanup() {
           if (this.debounceTimer) {
@@ -28,6 +29,7 @@ const AutofillInject = (function () {
             this.observer = null;
           }
           this.lastSignature = "";
+          this.reportingSuppressed = false;
         },
 
         isVisible(el) {
@@ -173,7 +175,7 @@ const AutofillInject = (function () {
           if (signature) this.lastSignature = signature;
           else this.lastSignature = "";
 
-          if (changed && result.hasLoginForm) {
+          if (changed && result.hasLoginForm && !this.reportingSuppressed) {
             try {
               if (
                 window.electronAPI &&
@@ -230,6 +232,9 @@ const AutofillInject = (function () {
 
           const needsUsername = !!(usernameInput && username);
           const ok = filledPassword && (!needsUsername || filledUsername);
+          if (ok) {
+            this.reportingSuppressed = true;
+          }
 
           return { ok: ok, filledUsername: filledUsername, filledPassword: filledPassword };
         },
