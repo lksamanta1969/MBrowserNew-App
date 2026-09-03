@@ -7,6 +7,8 @@ const { createVaultSession } = require("./vault/VaultSession");
 const { isMigrationComplete, deepClone, migrateVault } = require("./vault/VaultMigration");
 const { createVaultAccess } = require("./vault/VaultAccess");
 
+let shellWebContents = null;
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
@@ -25,6 +27,8 @@ function createWindow() {
     allowRunningInsecureContent: true
 }  
   });
+
+  shellWebContents = win.webContents;
 
   win.webContents.on("will-attach-webview", (_event, webPreferences, params) => {
     webPreferences.preload = path.join(__dirname, "preload.js");
@@ -1822,7 +1826,19 @@ function normalizePasswordUrl(url) {
     return String(url || "").trim();
 }
 
-ipcMain.handle("passwords:get", async () => {
+function isTrustedPasswordVaultSender(event) {
+    if (!shellWebContents || !event || !event.sender) return false;
+    return event.sender === shellWebContents;
+}
+
+function rejectUntrustedPasswordVaultSender(event) {
+    if (isTrustedPasswordVaultSender(event)) return null;
+    return { success: false, code: "UNTRUSTED_SENDER" };
+}
+
+ipcMain.handle("passwords:get", async (event) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         return { success: true, data: readPasswordsStore() };
     } catch (error) {
@@ -1831,6 +1847,8 @@ ipcMain.handle("passwords:get", async () => {
 });
 
 ipcMain.handle("passwords:add", async (event, payload) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         const url = normalizePasswordUrl(payload && payload.url);
         const username = String((payload && payload.username) || "").trim();
@@ -1867,6 +1885,8 @@ ipcMain.handle("passwords:add", async (event, payload) => {
 });
 
 ipcMain.handle("passwords:update", async (event, payload) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         const id = payload && payload.id;
         if (!id) return { success: false, error: "Password id is required." };
@@ -1901,6 +1921,8 @@ ipcMain.handle("passwords:update", async (event, payload) => {
 });
 
 ipcMain.handle("passwords:delete", async (event, payload) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         const ids = Array.isArray(payload)
             ? payload
@@ -1922,7 +1944,9 @@ ipcMain.handle("passwords:delete", async (event, payload) => {
     }
 });
 
-ipcMain.handle("passwords:clear", async () => {
+ipcMain.handle("passwords:clear", async (event) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         const data = readPasswordsStore();
         const deletedCount = data.entries.length;
@@ -1957,7 +1981,9 @@ function getVaultAccess() {
     return vaultAccess;
 }
 
-ipcMain.handle("vault:status", async () => {
+ipcMain.handle("vault:status", async (event) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         return getVaultSession().getStatus();
     } catch (error) {
@@ -1965,7 +1991,9 @@ ipcMain.handle("vault:status", async () => {
     }
 });
 
-ipcMain.handle("vault:setup", async (_event, payload) => {
+ipcMain.handle("vault:setup", async (event, payload) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         const masterPassword = payload && payload.masterPassword;
         const confirmPassword = payload && payload.confirmPassword;
@@ -1975,7 +2003,9 @@ ipcMain.handle("vault:setup", async (_event, payload) => {
     }
 });
 
-ipcMain.handle("vault:unlock", async (_event, payload) => {
+ipcMain.handle("vault:unlock", async (event, payload) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         const masterPassword = payload && payload.masterPassword;
         return await getVaultSession().unlock(masterPassword);
@@ -1984,7 +2014,9 @@ ipcMain.handle("vault:unlock", async (_event, payload) => {
     }
 });
 
-ipcMain.handle("vault:lock", async () => {
+ipcMain.handle("vault:lock", async (event) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         return getVaultSession().lock();
     } catch (error) {
@@ -1992,7 +2024,9 @@ ipcMain.handle("vault:lock", async () => {
     }
 });
 
-ipcMain.handle("vault:migrate", async (_event, payload) => {
+ipcMain.handle("vault:migrate", async (event, payload) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         const masterPassword = payload && payload.masterPassword;
         return await migrateVault({
@@ -2005,7 +2039,9 @@ ipcMain.handle("vault:migrate", async (_event, payload) => {
     }
 });
 
-ipcMain.handle("passwords:match", async (_event, payload) => {
+ipcMain.handle("passwords:match", async (event, payload) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         const origin = payload && payload.origin;
         return getVaultAccess().matchCredentials(origin);
@@ -2014,7 +2050,9 @@ ipcMain.handle("passwords:match", async (_event, payload) => {
     }
 });
 
-ipcMain.handle("passwords:retrieve-for-fill", async (_event, payload) => {
+ipcMain.handle("passwords:retrieve-for-fill", async (event, payload) => {
+    const rejected = rejectUntrustedPasswordVaultSender(event);
+    if (rejected) return rejected;
     try {
         const id = payload && payload.id;
         const origin = payload && payload.origin;
