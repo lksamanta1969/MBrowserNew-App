@@ -1208,8 +1208,11 @@ function loginUser(){
 async function loadInboxMessages(options) {
     clearSelection();
     const content = document.getElementById("content");
+    const requestedView = currentMailboxView;
     try {
         if (options.sync) {
+            if (currentMailboxView !== requestedView) return;
+
             const status = document.createElement("p");
             status.className = "sync-status";
             status.id = "syncStatus";
@@ -1222,7 +1225,11 @@ async function loadInboxMessages(options) {
             content.appendChild(status);
 
             const syncRes = await fetch("http://localhost:3000/syncInbox");
+            if (currentMailboxView !== requestedView) return;
+
             const syncPayload = await syncRes.json();
+            if (currentMailboxView !== requestedView) return;
+
             if (!syncPayload.success && syncPayload.error) {
                 status.textContent = "Sync note: " + syncPayload.error + " — showing local inbox.";
             } else {
@@ -1231,7 +1238,11 @@ async function loadInboxMessages(options) {
         }
 
         const response = await fetch(options.url);
+        if (currentMailboxView !== requestedView) return;
+
         const mails = await response.json();
+        if (currentMailboxView !== requestedView) return;
+
         renderSelectableMailList({
             title: options.title,
             items: mails,
@@ -1245,6 +1256,7 @@ async function loadInboxMessages(options) {
         });
         await refreshSidebarCounts();
     } catch (e) {
+        if (currentMailboxView !== requestedView) return;
         content.innerHTML = "<h3>❌ Backend Offline on Port 3000</h3>";
     }
 }
