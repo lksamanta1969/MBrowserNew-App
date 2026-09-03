@@ -19,11 +19,27 @@ const LoginDetection = (function () {
 
   function ensureApi() {
     const bridge = window.electronAPI || null;
-    if (!bridge || typeof bridge.passwordsGet !== "function") {
+    if (
+      !bridge ||
+      typeof bridge.passwordsMatch !== "function" ||
+      typeof bridge.passwordsRetrieveForFill !== "function" ||
+      typeof bridge.passwordsAdd !== "function" ||
+      typeof bridge.passwordsUpdate !== "function"
+    ) {
       console.warn("[LoginDetection] electronAPI not available");
       return null;
     }
     return bridge;
+  }
+
+  async function isEncryptedVaultLocked() {
+    const bridge = ensureApi();
+    if (!bridge || typeof bridge.vaultStatus !== "function") return false;
+
+    const result = await bridge.vaultStatus();
+    if (!result || !result.success || !result.data) return false;
+
+    return result.data.migrationState === "complete" && !result.data.unlocked;
   }
 
   function escapeAttr(text) {
@@ -391,16 +407,35 @@ const LoginDetection = (function () {
   async function findExisting(candidate) {
     const bridge = ensureApi();
     if (!bridge) return null;
-    const result = await bridge.passwordsGet();
-    const entries = (result && result.data && result.data.entries) || [];
+
     const origin = normalizeOriginValue(candidate.origin || candidate.url);
-    return (
-      entries.find((entry) => {
-        if (String(entry.username || "") !== String(candidate.username || "")) return false;
-        const entryOrigin = normalizeOriginValue(entry.origin || entry.url);
-        return entryOrigin && origin && entryOrigin === origin;
-      }) || null
+    if (!origin) return null;
+
+    const matchResult = await bridge.passwordsMatch({ origin });
+    if (!matchResult || !matchResult.success) return null;
+
+    const matches = (matchResult.data && matchResult.data.matches) || [];
+    const username = String(candidate.username || "");
+    const match = matches.find(
+      (item) => item && item.id && String(item.username || "") === username
     );
+    if (!match) return null;
+
+    const retrieveResult = await bridge.passwordsRetrieveForFill({
+      id: match.id,
+      origin
+    });
+    if (!retrieveResult || !retrieveResult.success || !retrieveResult.data) {
+      return null;
+    }
+
+    return {
+      id: match.id,
+      username: String(retrieveResult.data.username || match.username || ""),
+      password: String(retrieveResult.data.password || ""),
+      origin,
+      url: candidate.url || origin
+    };
   }
 
   async function handlePossibleSuccess(currentUrl) {
@@ -440,6 +475,10 @@ const LoginDetection = (function () {
 
     lastHandledKey = key;
     await clearPending();
+
+    if (await isEncryptedVaultLocked()) {
+      return;
+    }
 
     const existing = await findExisting(candidate);
     if (existing && existing.password === candidate.password) return;
