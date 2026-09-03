@@ -155,6 +155,18 @@ contextBridge.exposeInMainWorld(
     passwordsClear: () =>
       ipcRenderer.invoke("passwords:clear"),
 
+    vaultStatus: () =>
+      ipcRenderer.invoke("vault:status"),
+
+    vaultSetup: (payload) =>
+      ipcRenderer.invoke("vault:setup", payload),
+
+    vaultUnlock: (payload) =>
+      ipcRenderer.invoke("vault:unlock", payload),
+
+    vaultLock: () =>
+      ipcRenderer.invoke("vault:lock"),
+
     clipboardWriteText: (text) =>
       ipcRenderer.invoke("clipboard:write-text", text),
 

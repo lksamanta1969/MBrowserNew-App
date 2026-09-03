@@ -226,6 +226,14 @@
       <button type="button" class="bm-icon-btn" onclick="Passwords.closeManager()" title="Close">✕</button>
     </div>
     <div class="pw-manager-toolbar">
+      <div id="pwVaultStatusBar" class="pw-vault-status-bar">
+        <span id="pwVaultStatusText" class="pw-vault-status-text">Vault: checking…</span>
+        <div class="pw-vault-status-actions">
+          <button type="button" id="pwVaultSetupBtn" onclick="Passwords.openVaultSetupDialog()" hidden>Set up vault</button>
+          <button type="button" id="pwVaultUnlockBtn" onclick="Passwords.openVaultUnlockDialog()" hidden>Unlock</button>
+          <button type="button" id="pwVaultLockBtn" onclick="Passwords.lockVault()" hidden>Lock</button>
+        </div>
+      </div>
       <input id="pwSearchInput" type="search" placeholder="Search passwords" oninput="Passwords.onSearchInput(this.value)">
       <button type="button" onclick="Passwords.openAddDialog()">Add password</button>
       <button type="button" class="danger" onclick="Passwords.clearAll()">Clear all</button>
@@ -235,6 +243,25 @@
         <h3 id="pwListHeading">Saved passwords</h3>
         <div id="pwList" class="pw-list"></div>
       </section>
+    </div>
+  </div>
+</div>
+
+<div id="pwVaultBackdrop" class="bm-dialog-backdrop">
+  <div class="bm-dialog" role="dialog" aria-modal="true">
+    <h3 id="pwVaultTitle">Set up vault</h3>
+    <p id="pwVaultHint" class="pw-vault-hint">Create a master password to protect your encrypted vault.</p>
+    <div id="pwVaultError" class="pw-vault-error" hidden></div>
+    <label for="pwVaultPassword">Master password</label>
+    <input id="pwVaultPassword" type="password" autocomplete="new-password">
+    <div id="pwVaultConfirmBlock">
+      <label for="pwVaultConfirm">Confirm master password</label>
+      <input id="pwVaultConfirm" type="password" autocomplete="new-password">
+    </div>
+    <div class="bm-dialog-actions">
+      <div class="bm-dialog-spacer"></div>
+      <button type="button" onclick="Passwords.closeVaultDialog()">Cancel</button>
+      <button type="button" id="pwVaultSubmitBtn" class="primary" onclick="Passwords.submitVaultDialog()">Continue</button>
     </div>
   </div>
 </div>

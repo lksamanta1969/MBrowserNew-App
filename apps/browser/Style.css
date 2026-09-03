@@ -1187,6 +1187,48 @@ body[data-theme="dark"] .settings-manager-main h3{ color: #fde68a; }
     cursor: pointer;
 }
 .pw-manager-toolbar button.danger{ background: #b91c1c; }
+.pw-vault-status-bar{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+.pw-vault-status-text{
+    font-size: 13px;
+    font-weight: 700;
+    color: #92400e;
+}
+.pw-vault-status-actions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.pw-vault-status-actions button{
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    padding: 0 12px;
+    background: #fde68a;
+    color: #92400e;
+    font-weight: 700;
+    cursor: pointer;
+}
+.pw-vault-hint{
+    margin: 0 0 12px;
+    color: #6b7280;
+    font-size: 13px;
+    line-height: 1.45;
+}
+.pw-vault-error{
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 13px;
+    font-weight: 600;
+}
 .pw-manager-body{
     min-height: 420px;
     max-height: calc(100vh - 180px);

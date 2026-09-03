@@ -3,6 +3,7 @@ const { spawn, execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const { createVaultSession } = require("./vault/VaultSession");
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -1900,6 +1901,52 @@ ipcMain.handle("passwords:clear", async () => {
         data.entries = [];
         writePasswordsStore(data);
         return { success: true, data, deletedCount };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+/* ===================== Vault Session (Phase 1E-D.2) ===================== */
+
+let vaultSession = null;
+
+function getVaultSession() {
+    if (!vaultSession) {
+        vaultSession = createVaultSession({ userDataPath: app.getPath("userData") });
+    }
+    return vaultSession;
+}
+
+ipcMain.handle("vault:status", async () => {
+    try {
+        return getVaultSession().getStatus();
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("vault:setup", async (_event, payload) => {
+    try {
+        const masterPassword = payload && payload.masterPassword;
+        const confirmPassword = payload && payload.confirmPassword;
+        return await getVaultSession().setup(masterPassword, confirmPassword);
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("vault:unlock", async (_event, payload) => {
+    try {
+        const masterPassword = payload && payload.masterPassword;
+        return await getVaultSession().unlock(masterPassword);
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("vault:lock", async () => {
+    try {
+        return getVaultSession().lock();
     } catch (error) {
         return { success: false, error: error.message };
     }

@@ -1,12 +1,20 @@
 /**
  * MBrowser Password Storage Engine (Phase 1E-A)
- * Manual CRUD manager with search. No autofill / encryption yet.
+ * Manual CRUD manager with search. Vault encryption UI (Phase 1E-D.2).
  */
 
 const Passwords = (function () {
   let store = { entries: [] };
   let searchQuery = "";
   let revealedIds = new Set();
+  let vaultStatus = {
+    mode: "legacy",
+    unlocked: false,
+    encryptedVaultPresent: false,
+    legacyVaultPresent: true,
+    errorCode: null
+  };
+  let vaultDialogMode = "setup";
 
   function ensureApi() {
     const bridge = window.electronAPI || null;
@@ -15,6 +23,186 @@ const Passwords = (function () {
       return null;
     }
     return bridge;
+  }
+
+  function vaultStatusLabel(mode, unlocked) {
+    switch (mode) {
+      case "setup_required":
+        return "Vault: setup required";
+      case "legacy":
+        return "Vault: not encrypted yet";
+      case "legacy_with_vault":
+        return unlocked ? "Vault: unlocked (migration pending)" : "Vault: locked";
+      case "encrypted_locked":
+        return "Vault: locked";
+      case "encrypted_unlocked":
+        return "Vault: unlocked";
+      case "encrypted_error":
+        return "Vault: error";
+      default:
+        return "Vault: unknown";
+    }
+  }
+
+  async function refreshVaultStatus() {
+    const bridge = ensureApi();
+    if (!bridge || typeof bridge.vaultStatus !== "function") return vaultStatus;
+
+    const result = await bridge.vaultStatus();
+    if (result && result.success && result.data) {
+      vaultStatus = {
+        mode: result.data.mode || "legacy",
+        unlocked: !!result.data.unlocked,
+        encryptedVaultPresent: !!result.data.encryptedVaultPresent,
+        legacyVaultPresent: !!result.data.legacyVaultPresent,
+        errorCode: result.data.errorCode || null
+      };
+    }
+    return vaultStatus;
+  }
+
+  function renderVaultStatusBar() {
+    const textEl = document.getElementById("pwVaultStatusText");
+    const setupBtn = document.getElementById("pwVaultSetupBtn");
+    const unlockBtn = document.getElementById("pwVaultUnlockBtn");
+    const lockBtn = document.getElementById("pwVaultLockBtn");
+    if (!textEl) return;
+
+    textEl.textContent = vaultStatusLabel(vaultStatus.mode, vaultStatus.unlocked);
+
+    const mode = vaultStatus.mode;
+    const unlocked = vaultStatus.unlocked;
+
+    if (setupBtn) {
+      setupBtn.hidden = !(mode === "setup_required" || mode === "legacy");
+    }
+    if (unlockBtn) {
+      unlockBtn.hidden = !(
+        (mode === "legacy_with_vault" || mode === "encrypted_locked") &&
+        !unlocked
+      );
+    }
+    if (lockBtn) {
+      lockBtn.hidden = !(
+        (mode === "legacy_with_vault" ||
+          mode === "encrypted_unlocked") &&
+        unlocked
+      );
+    }
+  }
+
+  function setVaultDialogError(message) {
+    const errorEl = document.getElementById("pwVaultError");
+    if (!errorEl) return;
+    const text = String(message || "").trim();
+    if (!text) {
+      errorEl.hidden = true;
+      errorEl.textContent = "";
+      return;
+    }
+    errorEl.hidden = false;
+    errorEl.textContent = text;
+  }
+
+  function openVaultDialog(mode) {
+    const backdrop = document.getElementById("pwVaultBackdrop");
+    const titleEl = document.getElementById("pwVaultTitle");
+    const hintEl = document.getElementById("pwVaultHint");
+    const confirmBlock = document.getElementById("pwVaultConfirmBlock");
+    const passwordInput = document.getElementById("pwVaultPassword");
+    const confirmInput = document.getElementById("pwVaultConfirm");
+    const submitBtn = document.getElementById("pwVaultSubmitBtn");
+    if (!backdrop || !passwordInput) return;
+
+    vaultDialogMode = mode === "unlock" ? "unlock" : "setup";
+    setVaultDialogError("");
+
+    if (titleEl) {
+      titleEl.textContent =
+        vaultDialogMode === "unlock" ? "Unlock vault" : "Set up vault";
+    }
+    if (hintEl) {
+      hintEl.textContent =
+        vaultDialogMode === "unlock"
+          ? "Enter your master password to unlock the encrypted vault."
+          : "Create a master password to protect your encrypted vault. Your existing saved passwords stay in the legacy vault until migration.";
+    }
+    if (confirmBlock) {
+      confirmBlock.style.display = vaultDialogMode === "setup" ? "block" : "none";
+    }
+    if (confirmInput) confirmInput.value = "";
+    passwordInput.value = "";
+    if (submitBtn) {
+      submitBtn.textContent = vaultDialogMode === "unlock" ? "Unlock" : "Continue";
+    }
+
+    backdrop.classList.add("open");
+    setTimeout(() => passwordInput.focus(), 50);
+  }
+
+  function openVaultSetupDialog() {
+    openVaultDialog("setup");
+  }
+
+  function openVaultUnlockDialog() {
+    openVaultDialog("unlock");
+  }
+
+  function closeVaultDialog() {
+    const backdrop = document.getElementById("pwVaultBackdrop");
+    if (backdrop) backdrop.classList.remove("open");
+    setVaultDialogError("");
+    const passwordInput = document.getElementById("pwVaultPassword");
+    const confirmInput = document.getElementById("pwVaultConfirm");
+    if (passwordInput) passwordInput.value = "";
+    if (confirmInput) confirmInput.value = "";
+  }
+
+  async function submitVaultDialog() {
+    const bridge = ensureApi();
+    if (!bridge) return;
+
+    const passwordInput = document.getElementById("pwVaultPassword");
+    const confirmInput = document.getElementById("pwVaultConfirm");
+    const masterPassword = passwordInput ? passwordInput.value : "";
+    const confirmPassword = confirmInput ? confirmInput.value : "";
+
+    setVaultDialogError("");
+
+    let result;
+    if (vaultDialogMode === "unlock") {
+      if (typeof bridge.vaultUnlock !== "function") return;
+      result = await bridge.vaultUnlock({ masterPassword });
+    } else {
+      if (typeof bridge.vaultSetup !== "function") return;
+      result = await bridge.vaultSetup({ masterPassword, confirmPassword });
+    }
+
+    if (passwordInput) passwordInput.value = "";
+    if (confirmInput) confirmInput.value = "";
+
+    if (!result || !result.success) {
+      setVaultDialogError((result && result.error) || "Vault operation failed.");
+      return;
+    }
+
+    await refreshVaultStatus();
+    renderVaultStatusBar();
+    closeVaultDialog();
+  }
+
+  async function lockVault() {
+    const bridge = ensureApi();
+    if (!bridge || typeof bridge.vaultLock !== "function") return;
+
+    const result = await bridge.vaultLock();
+    if (!result || !result.success) {
+      alert((result && result.error) || "Could not lock vault.");
+      return;
+    }
+
+    await refreshVaultStatus();
+    renderVaultStatusBar();
   }
 
   async function refreshStore() {
@@ -312,9 +500,14 @@ const Passwords = (function () {
   async function openManager() {
     const manager = document.getElementById("passwordManager");
     if (!manager) return;
+    await refreshVaultStatus();
+    renderVaultStatusBar();
     await refreshStore();
     manager.classList.add("open");
     renderManager();
+    if (vaultStatus.mode === "setup_required") {
+      openVaultSetupDialog();
+    }
     const search = document.getElementById("pwSearchInput");
     if (search) search.focus();
   }
@@ -323,12 +516,19 @@ const Passwords = (function () {
     const manager = document.getElementById("passwordManager");
     if (manager) manager.classList.remove("open");
     closeFormDialog();
+    closeVaultDialog();
   }
 
   async function init() {
     await refreshStore();
+    await refreshVaultStatus();
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
+      const vault = document.getElementById("pwVaultBackdrop");
+      if (vault && vault.classList.contains("open")) {
+        closeVaultDialog();
+        return;
+      }
       const form = document.getElementById("pwFormBackdrop");
       if (form && form.classList.contains("open")) {
         closeFormDialog();
@@ -351,7 +551,12 @@ const Passwords = (function () {
     toggleFormPasswordVisibility,
     clearAll,
     applyExternalData,
-    refresh
+    refresh,
+    openVaultSetupDialog,
+    openVaultUnlockDialog,
+    closeVaultDialog,
+    submitVaultDialog,
+    lockVault
   };
 })();
 
