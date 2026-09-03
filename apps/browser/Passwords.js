@@ -28,6 +28,16 @@ const Passwords = (function () {
     return bridge;
   }
 
+  function isEncryptedVaultLockedForCrud() {
+    return vaultStatus.migrationState === "complete" && !vaultStatus.unlocked;
+  }
+
+  function clearRendererCredentialStore() {
+    store = { entries: [] };
+    revealedIds = new Set();
+    renderManager();
+  }
+
   function vaultStatusLabel(mode, unlocked) {
     switch (mode) {
       case "setup_required":
@@ -265,6 +275,10 @@ const Passwords = (function () {
     await refreshVaultStatus();
     renderVaultStatusBar();
     closeVaultDialog();
+    if (vaultDialogMode === "unlock") {
+      await refreshStore();
+      renderManager();
+    }
   }
 
   async function lockVault() {
@@ -279,13 +293,23 @@ const Passwords = (function () {
 
     await refreshVaultStatus();
     renderVaultStatusBar();
+    closeFormDialog();
+    clearRendererCredentialStore();
   }
 
   async function refreshStore() {
     const bridge = ensureApi();
     if (!bridge) return store;
     const result = await bridge.passwordsGet();
-    if (result && result.success && result.data) store = result.data;
+    if (result && result.success && result.data) {
+      store = result.data;
+      return store;
+    }
+    if (result && result.code === "VAULT_LOCKED") {
+      store = { entries: [] };
+      revealedIds = new Set();
+      renderManager();
+    }
     return store;
   }
 
@@ -445,6 +469,8 @@ const Passwords = (function () {
   }
 
   function openFormDialog(state) {
+    if (isEncryptedVaultLockedForCrud()) return;
+
     const backdrop = document.getElementById("pwFormBackdrop");
     const titleEl = document.getElementById("pwFormTitle");
     const urlInput = document.getElementById("pwFormUrl");
@@ -485,6 +511,7 @@ const Passwords = (function () {
   async function saveForm() {
     const bridge = ensureApi();
     if (!bridge) return;
+    if (isEncryptedVaultLockedForCrud()) return;
 
     const backdrop = document.getElementById("pwFormBackdrop");
     const urlInput = document.getElementById("pwFormUrl");
@@ -536,6 +563,7 @@ const Passwords = (function () {
   async function deleteEntry(id) {
     const bridge = ensureApi();
     if (!bridge) return;
+    if (isEncryptedVaultLockedForCrud()) return;
     if (!confirm("Delete this saved password?")) return;
     const result = await bridge.passwordsDelete({ id });
     if (!result || !result.success) {
@@ -555,6 +583,7 @@ const Passwords = (function () {
   async function clearAll() {
     const bridge = ensureApi();
     if (!bridge) return;
+    if (isEncryptedVaultLockedForCrud()) return;
     if (!confirm("Delete all saved passwords? This cannot be undone.")) return;
     const result = await bridge.passwordsClear();
     if (!result || !result.success) {
@@ -570,6 +599,7 @@ const Passwords = (function () {
   }
 
   function openAddDialog() {
+    if (isEncryptedVaultLockedForCrud()) return;
     openFormDialog({ mode: "add", entry: {} });
   }
 
