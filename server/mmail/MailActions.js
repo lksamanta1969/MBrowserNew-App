@@ -357,6 +357,52 @@ function createMailActions(store) {
         return { success: true, ids: changed };
     }
 
+    function setMessageFlagByIds(ids, field, value, errorMessage) {
+        const db = store.load();
+        const changed = [];
+
+        ids.forEach((id) => {
+            const location = store.findRecordLocation(db, id);
+            if (!location || !location.record || !store.isActive(location.record)) return;
+            const record = location.record;
+            if (record.mailbox !== "inbox" && record.mailbox !== "sent") return;
+            record[field] = value;
+            touch(record);
+            changed.push(id);
+        });
+
+        if (!changed.length) {
+            return { success: false, error: errorMessage };
+        }
+
+        store.save(db);
+        return { success: true, ids: changed };
+    }
+
+    function markReadByIds(ids) {
+        return setMessageFlagByIds(ids, "isRead", true, "No active messages found to mark as read.");
+    }
+
+    function markUnreadByIds(ids) {
+        return setMessageFlagByIds(ids, "isRead", false, "No active messages found to mark as unread.");
+    }
+
+    function starByIds(ids) {
+        return setMessageFlagByIds(ids, "starred", true, "No active messages found to star.");
+    }
+
+    function unstarByIds(ids) {
+        return setMessageFlagByIds(ids, "starred", false, "No active messages found to unstar.");
+    }
+
+    function markImportantByIds(ids) {
+        return setMessageFlagByIds(ids, "important", true, "No active messages found to mark as important.");
+    }
+
+    function markNotImportantByIds(ids) {
+        return setMessageFlagByIds(ids, "important", false, "No active messages found to mark as not important.");
+    }
+
     function performAction(action, ids, params) {
         const normalized = Array.isArray(ids) ? ids.map(String).filter(Boolean) : [];
 
@@ -385,6 +431,18 @@ function createMailActions(store) {
                 return renameLevel(params && params.levelId, params && params.name);
             case "delete_level":
                 return deleteLevel(params && params.levelId);
+            case "mark_read":
+                return markReadByIds(normalized);
+            case "mark_unread":
+                return markUnreadByIds(normalized);
+            case "star":
+                return starByIds(normalized);
+            case "unstar":
+                return unstarByIds(normalized);
+            case "mark_important":
+                return markImportantByIds(normalized);
+            case "mark_not_important":
+                return markNotImportantByIds(normalized);
             default:
                 return { success: false, error: `Unsupported action: ${action}` };
         }
