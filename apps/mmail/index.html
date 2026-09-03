@@ -104,6 +104,19 @@ body.dark .level-menu-popup button:hover { background:#3d2f1f; }
 .mail-card-row { display:flex; gap:12px; align-items:flex-start; }
 .mail-card-row input[type="checkbox"] { margin-top:4px; width:16px; height:16px; cursor:pointer; flex-shrink:0; }
 .mail-card-body { flex:1; min-width:0; }
+.mail-card.mail-unread { background:#fff; border-left-color:#2563eb; }
+.mail-card.mail-unread .mail-card-body { font-weight:bold; }
+.mail-card.mail-starred { border-left-color:#eab308; }
+.mail-card.mail-important { box-shadow:inset 0 0 0 1px #f59e0b; }
+.mail-important-badge { display:inline-block; font-size:11px; font-weight:bold; color:#b45309; background:#fff7ed; border:1px solid #fdba74; border-radius:4px; padding:2px 6px; margin-bottom:6px; }
+body.dark .mail-card.mail-unread { background:#363652; border-left-color:#60a5fa; }
+body.dark .mail-card.mail-starred { border-left-color:#facc15; }
+body.dark .mail-card.mail-important { box-shadow:inset 0 0 0 1px #d97706; }
+body.dark .mail-important-badge { color:#fdba74; background:#3d2f1f; border-color:#92400e; }
+.bulk-toolbar button.flag-btn { background:#6366f1; color:#fff; }
+.trash-actions button.flag-btn { background:#6366f1; color:#fff; }
+body.dark .bulk-toolbar button.flag-btn,
+body.dark .trash-actions button.flag-btn { background:#4f46e5; color:#fff; }
 
 /* Popup Module */
 .popup{ display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999; }
@@ -847,6 +860,38 @@ async function bulkTrashSelected() {
     await refreshSidebarCounts();
 }
 
+async function applyMailFlagAction(action, ids) {
+    if (!ids.length) return false;
+    const result = await postMailAction(action, ids);
+    if (!result || !result.success) {
+        alert((result && result.error) || "Could not update message flags.");
+        return false;
+    }
+    await reloadCurrentView();
+    await refreshSidebarCounts();
+    return true;
+}
+
+async function bulkMailFlagAction(action) {
+    const ids = Array.from(selectedMessageIds);
+    if (!ids.length) return;
+    await applyMailFlagAction(action, ids);
+}
+
+async function rowMailFlagAction(action, id) {
+    if (!id) return;
+    await applyMailFlagAction(action, [id]);
+}
+
+const FLAG_BULK_ACTIONS = [
+    { action: "mark_read", label: "Mark Read" },
+    { action: "mark_unread", label: "Mark Unread" },
+    { action: "star", label: "Star" },
+    { action: "unstar", label: "Unstar" },
+    { action: "mark_important", label: "Important" },
+    { action: "mark_not_important", label: "Not Important" }
+];
+
 async function bulkSetCategorySelected() {
     const ids = Array.from(selectedMessageIds);
     if (!ids.length) return;
@@ -936,6 +981,14 @@ function renderSelectableMailList(options) {
     moveBtn.addEventListener("click", bulkMoveSelected);
     bulkToolbarEl.appendChild(moveBtn);
 
+    FLAG_BULK_ACTIONS.forEach(({ action, label }) => {
+        const flagBtn = document.createElement("button");
+        flagBtn.className = "flag-btn";
+        flagBtn.textContent = label;
+        flagBtn.addEventListener("click", () => bulkMailFlagAction(action));
+        bulkToolbarEl.appendChild(flagBtn);
+    });
+
     content.appendChild(bulkToolbarEl);
     updateBulkToolbar();
     updateSelectAllCheckbox();
@@ -950,6 +1003,9 @@ function renderSelectableMailList(options) {
     options.items.forEach((item) => {
         const card = document.createElement("div");
         card.className = "mail-card";
+        if (item.isRead === false) card.classList.add("mail-unread");
+        if (item.starred === true) card.classList.add("mail-starred");
+        if (item.important === true) card.classList.add("mail-important");
         if (options.borderColor) card.style.borderLeftColor = options.borderColor;
 
         const row = document.createElement("div");
@@ -971,6 +1027,13 @@ function renderSelectableMailList(options) {
         const body = document.createElement("div");
         body.className = "mail-card-body";
 
+        if (item.important === true) {
+            const badge = document.createElement("div");
+            badge.className = "mail-important-badge";
+            badge.textContent = "Important";
+            body.appendChild(badge);
+        }
+
         const lines = options.buildLines(item);
         lines.forEach((line) => {
             const lineRow = document.createElement("div");
@@ -990,6 +1053,20 @@ function renderSelectableMailList(options) {
 
         const actions = document.createElement("div");
         actions.className = "trash-actions";
+
+        if (item.id) {
+            const starBtn = document.createElement("button");
+            starBtn.className = "flag-btn";
+            starBtn.textContent = item.starred === true ? "Unstar" : "Star";
+            starBtn.addEventListener("click", () => rowMailFlagAction(item.starred === true ? "unstar" : "star", item.id));
+            actions.appendChild(starBtn);
+
+            const readBtn = document.createElement("button");
+            readBtn.className = "flag-btn";
+            readBtn.textContent = item.isRead === false ? "Mark Read" : "Mark Unread";
+            readBtn.addEventListener("click", () => rowMailFlagAction(item.isRead === false ? "mark_read" : "mark_unread", item.id));
+            actions.appendChild(readBtn);
+        }
 
         const deleteBtnSingle = document.createElement("button");
         deleteBtnSingle.textContent = "Delete";
