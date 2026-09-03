@@ -170,6 +170,12 @@ contextBridge.exposeInMainWorld(
     vaultMigrate: (payload) =>
       ipcRenderer.invoke("vault:migrate", payload),
 
+    passwordsMatch: (payload) =>
+      ipcRenderer.invoke("passwords:match", payload),
+
+    passwordsRetrieveForFill: (payload) =>
+      ipcRenderer.invoke("passwords:retrieve-for-fill", payload),
+
     clipboardWriteText: (text) =>
       ipcRenderer.invoke("clipboard:write-text", text),
 

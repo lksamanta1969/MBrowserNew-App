@@ -5,6 +5,7 @@ const path = require("path");
 const os = require("os");
 const { createVaultSession } = require("./vault/VaultSession");
 const { isMigrationComplete, deepClone, migrateVault } = require("./vault/VaultMigration");
+const { createVaultAccess } = require("./vault/VaultAccess");
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -1936,12 +1937,24 @@ ipcMain.handle("passwords:clear", async () => {
 /* ===================== Vault Session (Phase 1E-D.2) ===================== */
 
 let vaultSession = null;
+let vaultAccess = null;
 
 function getVaultSession() {
     if (!vaultSession) {
         vaultSession = createVaultSession({ userDataPath: app.getPath("userData") });
     }
     return vaultSession;
+}
+
+function getVaultAccess() {
+    if (!vaultAccess) {
+        vaultAccess = createVaultAccess({
+            userDataPath: app.getPath("userData"),
+            getSession: () => getVaultSession(),
+            isMigrationComplete
+        });
+    }
+    return vaultAccess;
 }
 
 ipcMain.handle("vault:status", async () => {
@@ -1987,6 +2000,25 @@ ipcMain.handle("vault:migrate", async (_event, payload) => {
             session: getVaultSession(),
             masterPassword
         });
+    } catch (error) {
+        return { success: false, error: error.message, code: error.code || undefined };
+    }
+});
+
+ipcMain.handle("passwords:match", async (_event, payload) => {
+    try {
+        const origin = payload && payload.origin;
+        return getVaultAccess().matchCredentials(origin);
+    } catch (error) {
+        return { success: false, error: error.message, code: error.code || undefined };
+    }
+});
+
+ipcMain.handle("passwords:retrieve-for-fill", async (_event, payload) => {
+    try {
+        const id = payload && payload.id;
+        const origin = payload && payload.origin;
+        return getVaultAccess().retrieveCredentialForFill(id, origin);
     } catch (error) {
         return { success: false, error: error.message, code: error.code || undefined };
     }
