@@ -6,7 +6,8 @@
   "license": "MIT",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "test:vault": "node vault/test-vault-crypto.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
