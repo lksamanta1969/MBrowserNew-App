@@ -167,6 +167,9 @@ contextBridge.exposeInMainWorld(
     vaultLock: () =>
       ipcRenderer.invoke("vault:lock"),
 
+    vaultMigrate: (payload) =>
+      ipcRenderer.invoke("vault:migrate", payload),
+
     clipboardWriteText: (text) =>
       ipcRenderer.invoke("clipboard:write-text", text),
 

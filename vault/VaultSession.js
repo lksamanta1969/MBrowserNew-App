@@ -1,6 +1,6 @@
 /**
- * MBrowser encrypted vault session — main-process unlock lifecycle (Phase 1E-D.2).
- * Master password and derived keys are never stored. Unlock state is in-memory only.
+ * MBrowser encrypted vault session — main-process unlock lifecycle (Phase 1E-D.2/1E-D.3).
+ * Master password and derived keys are never exposed to renderer/preload.
  */
 
 const fs = require("fs");
@@ -16,6 +16,11 @@ const {
   writeEncryptedVaultAtomic
 } = require("./VaultCrypto");
 
+const {
+  isMigrationComplete,
+  computeMigrationStatus
+} = require("./VaultMigration");
+
 const SESSION_ERROR_CODES = Object.freeze({
   SETUP_ALREADY_COMPLETE: "SETUP_ALREADY_COMPLETE",
   PASSWORD_REQUIRED: "PASSWORD_REQUIRED",
@@ -23,7 +28,9 @@ const SESSION_ERROR_CODES = Object.freeze({
   WRONG_PASSWORD: "WRONG_PASSWORD",
   VAULT_CORRUPT: "VAULT_CORRUPT",
   VAULT_NOT_FOUND: "VAULT_NOT_FOUND",
-  NO_ENCRYPTED_VAULT: "NO_ENCRYPTED_VAULT"
+  NO_ENCRYPTED_VAULT: "NO_ENCRYPTED_VAULT",
+  VAULT_LOCKED: "VAULT_LOCKED",
+  VAULT_UNAVAILABLE: "VAULT_UNAVAILABLE"
 });
 
 const VAULT_MODES = Object.freeze({
@@ -42,8 +49,12 @@ function emptyVaultPayload() {
   return { version: 1, entries: [] };
 }
 
-function normalizePasswordInput(value) {
-  return typeof value === "string" ? value : "";
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeMasterPassword(masterPassword) {
+  return typeof masterPassword === "string" ? masterPassword : "";
 }
 
 function mapCryptoError(error) {
@@ -76,8 +87,23 @@ function createVaultSession(options = {}) {
   const encryptedPath = path.join(userDataPath, ENCRYPTED_FILENAME);
 
   let unlocked = false;
+  let sessionMasterPassword = null;
+  let decryptedCache = null;
+
+  function clearSessionSecrets() {
+    unlocked = false;
+    sessionMasterPassword = null;
+    decryptedCache = null;
+  }
+
+  function establishUnlockedSession(masterPassword, payload) {
+    sessionMasterPassword = normalizeMasterPassword(masterPassword);
+    decryptedCache = deepClone(payload);
+    unlocked = true;
+  }
 
   function legacyVaultPresent() {
+    if (isMigrationComplete(userDataPath)) return false;
     if (!fs.existsSync(legacyPath)) return false;
     try {
       const raw = fs.readFileSync(legacyPath, "utf8");
@@ -106,8 +132,10 @@ function createVaultSession(options = {}) {
   }
 
   function computeMode() {
+    const migrationComplete = isMigrationComplete(userDataPath);
     const legacyPresent = legacyVaultPresent();
     const encrypted = inspectEncryptedVault();
+    const migration = computeMigrationStatus(userDataPath, { isUnlocked: () => unlocked });
 
     if (encrypted.present && !encrypted.valid) {
       return {
@@ -115,7 +143,23 @@ function createVaultSession(options = {}) {
         unlocked: false,
         encryptedVaultPresent: true,
         legacyVaultPresent: legacyPresent,
-        errorCode: encrypted.errorCode || SESSION_ERROR_CODES.VAULT_CORRUPT
+        errorCode: encrypted.errorCode || SESSION_ERROR_CODES.VAULT_CORRUPT,
+        migrationState: migration.migrationState,
+        legacyEntryCount: migration.legacyEntryCount,
+        canMigrate: false
+      };
+    }
+
+    if (migrationComplete) {
+      return {
+        mode: unlocked ? VAULT_MODES.ENCRYPTED_UNLOCKED : VAULT_MODES.ENCRYPTED_LOCKED,
+        unlocked,
+        encryptedVaultPresent: true,
+        legacyVaultPresent: false,
+        errorCode: null,
+        migrationState: migration.migrationState,
+        legacyEntryCount: migration.legacyEntryCount,
+        canMigrate: false
       };
     }
 
@@ -125,7 +169,10 @@ function createVaultSession(options = {}) {
         unlocked,
         encryptedVaultPresent: true,
         legacyVaultPresent: true,
-        errorCode: null
+        errorCode: null,
+        migrationState: migration.migrationState,
+        legacyEntryCount: migration.legacyEntryCount,
+        canMigrate: migration.canMigrate
       };
     }
 
@@ -135,7 +182,10 @@ function createVaultSession(options = {}) {
         unlocked,
         encryptedVaultPresent: true,
         legacyVaultPresent: false,
-        errorCode: null
+        errorCode: null,
+        migrationState: migration.migrationState,
+        legacyEntryCount: migration.legacyEntryCount,
+        canMigrate: false
       };
     }
 
@@ -145,7 +195,10 @@ function createVaultSession(options = {}) {
         unlocked: false,
         encryptedVaultPresent: false,
         legacyVaultPresent: true,
-        errorCode: null
+        errorCode: null,
+        migrationState: migration.migrationState,
+        legacyEntryCount: migration.legacyEntryCount,
+        canMigrate: false
       };
     }
 
@@ -154,7 +207,10 @@ function createVaultSession(options = {}) {
       unlocked: false,
       encryptedVaultPresent: false,
       legacyVaultPresent: false,
-      errorCode: null
+      errorCode: null,
+      migrationState: migration.migrationState,
+      legacyEntryCount: 0,
+      canMigrate: false
     };
   }
 
@@ -167,8 +223,8 @@ function createVaultSession(options = {}) {
   }
 
   async function setup(masterPassword, confirmPassword) {
-    const password = normalizePasswordInput(masterPassword);
-    const confirm = normalizePasswordInput(confirmPassword);
+    const password = normalizeMasterPassword(masterPassword);
+    const confirm = normalizeMasterPassword(confirmPassword);
 
     if (!password.length) {
       return fail(SESSION_ERROR_CODES.PASSWORD_REQUIRED, "Master password is required.");
@@ -186,18 +242,20 @@ function createVaultSession(options = {}) {
     }
 
     try {
-      const envelope = await encryptVaultPayload(emptyVaultPayload(), password);
+      const payload = emptyVaultPayload();
+      const envelope = await encryptVaultPayload(payload, password);
       writeEncryptedVaultAtomic(encryptedPath, envelope);
-      unlocked = true;
+      establishUnlockedSession(password, payload);
       return getStatus();
     } catch (error) {
+      clearSessionSecrets();
       const code = mapCryptoError(error);
       return fail(code, error.message || "Vault setup failed.");
     }
   }
 
   async function unlock(masterPassword) {
-    const password = normalizePasswordInput(masterPassword);
+    const password = normalizeMasterPassword(masterPassword);
 
     if (!password.length) {
       return fail(SESSION_ERROR_CODES.PASSWORD_REQUIRED, "Master password is required.");
@@ -211,17 +269,17 @@ function createVaultSession(options = {}) {
     try {
       envelope = readEncryptedVaultFile(encryptedPath);
     } catch (error) {
-      unlocked = false;
+      clearSessionSecrets();
       const code = mapCryptoError(error);
       return fail(code, "Encrypted vault is corrupt or unsupported.");
     }
 
     try {
-      await decryptVaultPayload(envelope, password);
-      unlocked = true;
+      const payload = await decryptVaultPayload(envelope, password);
+      establishUnlockedSession(password, payload);
       return getStatus();
     } catch (error) {
-      unlocked = false;
+      clearSessionSecrets();
       const code = mapCryptoError(error);
       if (code === SESSION_ERROR_CODES.WRONG_PASSWORD) {
         return fail(code, "Incorrect master password.");
@@ -231,7 +289,7 @@ function createVaultSession(options = {}) {
   }
 
   function lock() {
-    unlocked = false;
+    clearSessionSecrets();
     return getStatus();
   }
 
@@ -239,12 +297,47 @@ function createVaultSession(options = {}) {
     return unlocked;
   }
 
+  function getDecryptedVault() {
+    if (!unlocked || !decryptedCache) return null;
+    return deepClone(decryptedCache);
+  }
+
+  async function persistDecryptedVault(data) {
+    if (!unlocked || !sessionMasterPassword) {
+      const error = new Error("Password vault is locked.");
+      error.code = SESSION_ERROR_CODES.VAULT_LOCKED;
+      throw error;
+    }
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      const error = new Error("Password vault payload is invalid.");
+      error.code = SESSION_ERROR_CODES.VAULT_UNAVAILABLE;
+      throw error;
+    }
+
+    const envelope = await encryptVaultPayload(data, sessionMasterPassword);
+    writeEncryptedVaultAtomic(encryptedPath, envelope);
+    decryptedCache = deepClone(data);
+    return deepClone(decryptedCache);
+  }
+
+  async function reloadDecryptedVaultFromDisk() {
+    if (!unlocked || !sessionMasterPassword) {
+      const error = new Error("Password vault is locked.");
+      error.code = SESSION_ERROR_CODES.VAULT_LOCKED;
+      throw error;
+    }
+    const envelope = readEncryptedVaultFile(encryptedPath);
+    const payload = await decryptVaultPayload(envelope, sessionMasterPassword);
+    decryptedCache = deepClone(payload);
+    return deepClone(decryptedCache);
+  }
+
   function getPaths() {
     return { legacyPath, encryptedPath, userDataPath };
   }
 
   function _resetSessionForTests() {
-    unlocked = false;
+    clearSessionSecrets();
   }
 
   return {
@@ -257,6 +350,10 @@ function createVaultSession(options = {}) {
     unlock,
     lock,
     isUnlocked,
+    getDecryptedVault,
+    persistDecryptedVault,
+    reloadDecryptedVaultFromDisk,
+    establishUnlockedSession,
     getPaths,
     _resetSessionForTests
   };

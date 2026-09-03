@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const { createVaultSession } = require("./vault/VaultSession");
+const { isMigrationComplete, deepClone, migrateVault } = require("./vault/VaultMigration");
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -1750,6 +1751,24 @@ function defaultPasswordsData() {
 }
 
 function readPasswordsStore() {
+    const userDataPath = app.getPath("userData");
+
+    if (isMigrationComplete(userDataPath)) {
+        const session = getVaultSession();
+        if (!session.isUnlocked()) {
+            const error = new Error("Password vault is locked.");
+            error.code = "VAULT_LOCKED";
+            throw error;
+        }
+        const data = session.getDecryptedVault();
+        if (!data) {
+            const error = new Error("Password vault is unavailable.");
+            error.code = "VAULT_UNAVAILABLE";
+            throw error;
+        }
+        return deepClone(data);
+    }
+
     const filePath = passwordsFilePath();
 
     if (!fs.existsSync(filePath)) {
@@ -1769,11 +1788,19 @@ function readPasswordsStore() {
     }
 }
 
-function writePasswordsStore(data) {
+async function writePasswordsStore(data) {
+    const userDataPath = app.getPath("userData");
+
+    if (isMigrationComplete(userDataPath)) {
+        const session = getVaultSession();
+        return session.persistDecryptedVault(data);
+    }
+
     const filePath = passwordsFilePath();
     const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+    return data;
 }
 
 function derivePasswordOrigin(urlOrOrigin) {
@@ -1798,7 +1825,7 @@ ipcMain.handle("passwords:get", async () => {
     try {
         return { success: true, data: readPasswordsStore() };
     } catch (error) {
-        return { success: false, error: error.message };
+        return { success: false, error: error.message, code: error.code || undefined };
     }
 });
 
@@ -1831,10 +1858,10 @@ ipcMain.handle("passwords:add", async (event, payload) => {
         };
 
         data.entries.unshift(entry);
-        writePasswordsStore(data);
+        await writePasswordsStore(data);
         return { success: true, data, entry };
     } catch (error) {
-        return { success: false, error: error.message };
+        return { success: false, error: error.message, code: error.code || undefined };
     }
 });
 
@@ -1865,10 +1892,10 @@ ipcMain.handle("passwords:update", async (event, payload) => {
         }
 
         entry.updatedAt = Date.now();
-        writePasswordsStore(data);
+        await writePasswordsStore(data);
         return { success: true, data, entry };
     } catch (error) {
-        return { success: false, error: error.message };
+        return { success: false, error: error.message, code: error.code || undefined };
     }
 });
 
@@ -1887,7 +1914,7 @@ ipcMain.handle("passwords:delete", async (event, payload) => {
         const data = readPasswordsStore();
         const before = data.entries.length;
         data.entries = data.entries.filter((entry) => !idSet.has(String(entry.id)));
-        writePasswordsStore(data);
+        await writePasswordsStore(data);
         return { success: true, data, deletedCount: before - data.entries.length };
     } catch (error) {
         return { success: false, error: error.message };
@@ -1899,10 +1926,10 @@ ipcMain.handle("passwords:clear", async () => {
         const data = readPasswordsStore();
         const deletedCount = data.entries.length;
         data.entries = [];
-        writePasswordsStore(data);
+        await writePasswordsStore(data);
         return { success: true, data, deletedCount };
     } catch (error) {
-        return { success: false, error: error.message };
+        return { success: false, error: error.message, code: error.code || undefined };
     }
 });
 
@@ -1949,6 +1976,19 @@ ipcMain.handle("vault:lock", async () => {
         return getVaultSession().lock();
     } catch (error) {
         return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle("vault:migrate", async (_event, payload) => {
+    try {
+        const masterPassword = payload && payload.masterPassword;
+        return await migrateVault({
+            userDataPath: app.getPath("userData"),
+            session: getVaultSession(),
+            masterPassword
+        });
+    } catch (error) {
+        return { success: false, error: error.message, code: error.code || undefined };
     }
 });
 

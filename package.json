@@ -8,7 +8,8 @@
   "scripts": {
     "start": "electron .",
     "test:vault": "node vault/test-vault-crypto.js",
-    "test:vault-session": "node vault/test-vault-session.js"
+    "test:vault-session": "node vault/test-vault-session.js",
+    "test:vault-migration": "node vault/test-vault-migration.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

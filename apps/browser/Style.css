@@ -1214,6 +1214,10 @@ body[data-theme="dark"] .settings-manager-main h3{ color: #fde68a; }
     font-weight: 700;
     cursor: pointer;
 }
+.pw-vault-status-actions button.pw-vault-migrate-btn{
+    background: #b45309;
+    color: #fff;
+}
 .pw-vault-hint{
     margin: 0 0 12px;
     color: #6b7280;

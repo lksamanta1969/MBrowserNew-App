@@ -232,6 +232,7 @@
           <button type="button" id="pwVaultSetupBtn" onclick="Passwords.openVaultSetupDialog()" hidden>Set up vault</button>
           <button type="button" id="pwVaultUnlockBtn" onclick="Passwords.openVaultUnlockDialog()" hidden>Unlock</button>
           <button type="button" id="pwVaultLockBtn" onclick="Passwords.lockVault()" hidden>Lock</button>
+          <button type="button" id="pwVaultMigrateBtn" class="pw-vault-migrate-btn" onclick="Passwords.openMigrateDialog()" hidden>Migrate now</button>
         </div>
       </div>
       <input id="pwSearchInput" type="search" placeholder="Search passwords" oninput="Passwords.onSearchInput(this.value)">
@@ -262,6 +263,24 @@
       <div class="bm-dialog-spacer"></div>
       <button type="button" onclick="Passwords.closeVaultDialog()">Cancel</button>
       <button type="button" id="pwVaultSubmitBtn" class="primary" onclick="Passwords.submitVaultDialog()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div id="pwMigrateBackdrop" class="bm-dialog-backdrop">
+  <div class="bm-dialog" role="dialog" aria-modal="true">
+    <h3 id="pwMigrateTitle">Migrate to encrypted vault</h3>
+    <p id="pwMigrateHint" class="pw-vault-hint">
+      Your saved credentials will be moved into the encrypted vault. The active plaintext
+      <code>passwords.json</code> file will be retired after verification, and a verified backup will be kept.
+    </p>
+    <div id="pwMigrateError" class="pw-vault-error" hidden></div>
+    <label for="pwMigratePassword">Re-enter master password</label>
+    <input id="pwMigratePassword" type="password" autocomplete="current-password">
+    <div class="bm-dialog-actions">
+      <div class="bm-dialog-spacer"></div>
+      <button type="button" onclick="Passwords.closeMigrateDialog()">Cancel</button>
+      <button type="button" class="primary" onclick="Passwords.submitMigrateDialog()">Migrate</button>
     </div>
   </div>
 </div>

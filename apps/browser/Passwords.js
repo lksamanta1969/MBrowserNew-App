@@ -12,7 +12,10 @@ const Passwords = (function () {
     unlocked: false,
     encryptedVaultPresent: false,
     legacyVaultPresent: true,
-    errorCode: null
+    errorCode: null,
+    migrationState: "none",
+    legacyEntryCount: 0,
+    canMigrate: false
   };
   let vaultDialogMode = "setup";
 
@@ -32,11 +35,15 @@ const Passwords = (function () {
       case "legacy":
         return "Vault: not encrypted yet";
       case "legacy_with_vault":
-        return unlocked ? "Vault: unlocked (migration pending)" : "Vault: locked";
+        return unlocked ? "Vault: unlocked (migration pending)" : "Vault: locked (migration pending)";
       case "encrypted_locked":
-        return "Vault: locked";
+        return vaultStatus.migrationState === "complete"
+          ? "Vault: locked (encrypted)"
+          : "Vault: locked";
       case "encrypted_unlocked":
-        return "Vault: unlocked";
+        return vaultStatus.migrationState === "complete"
+          ? "Vault: unlocked (encrypted)"
+          : "Vault: unlocked";
       case "encrypted_error":
         return "Vault: error";
       default:
@@ -55,7 +62,10 @@ const Passwords = (function () {
         unlocked: !!result.data.unlocked,
         encryptedVaultPresent: !!result.data.encryptedVaultPresent,
         legacyVaultPresent: !!result.data.legacyVaultPresent,
-        errorCode: result.data.errorCode || null
+        errorCode: result.data.errorCode || null,
+        migrationState: result.data.migrationState || "none",
+        legacyEntryCount: Number(result.data.legacyEntryCount || 0),
+        canMigrate: !!result.data.canMigrate
       };
     }
     return vaultStatus;
@@ -66,6 +76,7 @@ const Passwords = (function () {
     const setupBtn = document.getElementById("pwVaultSetupBtn");
     const unlockBtn = document.getElementById("pwVaultUnlockBtn");
     const lockBtn = document.getElementById("pwVaultLockBtn");
+    const migrateBtn = document.getElementById("pwVaultMigrateBtn");
     if (!textEl) return;
 
     textEl.textContent = vaultStatusLabel(vaultStatus.mode, vaultStatus.unlocked);
@@ -89,6 +100,71 @@ const Passwords = (function () {
         unlocked
       );
     }
+    if (migrateBtn) {
+      migrateBtn.hidden = !vaultStatus.canMigrate;
+    }
+  }
+
+  function setMigrateDialogError(message) {
+    const errorEl = document.getElementById("pwMigrateError");
+    if (!errorEl) return;
+    const text = String(message || "").trim();
+    if (!text) {
+      errorEl.hidden = true;
+      errorEl.textContent = "";
+      return;
+    }
+    errorEl.hidden = false;
+    errorEl.textContent = text;
+  }
+
+  function openMigrateDialog() {
+    const backdrop = document.getElementById("pwMigrateBackdrop");
+    const hintEl = document.getElementById("pwMigrateHint");
+    const passwordInput = document.getElementById("pwMigratePassword");
+    if (!backdrop || !passwordInput) return;
+
+    setMigrateDialogError("");
+    if (hintEl) {
+      const count = vaultStatus.legacyEntryCount || 0;
+      hintEl.textContent =
+        `Migrate ${count} saved credential${count === 1 ? "" : "s"} into the encrypted vault. ` +
+        "The active plaintext passwords.json file will be retired after verification, and a verified backup will be kept.";
+    }
+    passwordInput.value = "";
+    backdrop.classList.add("open");
+    setTimeout(() => passwordInput.focus(), 50);
+  }
+
+  function closeMigrateDialog() {
+    const backdrop = document.getElementById("pwMigrateBackdrop");
+    if (backdrop) backdrop.classList.remove("open");
+    setMigrateDialogError("");
+    const passwordInput = document.getElementById("pwMigratePassword");
+    if (passwordInput) passwordInput.value = "";
+  }
+
+  async function submitMigrateDialog() {
+    const bridge = ensureApi();
+    if (!bridge || typeof bridge.vaultMigrate !== "function") return;
+
+    const passwordInput = document.getElementById("pwMigratePassword");
+    const masterPassword = passwordInput ? passwordInput.value : "";
+    setMigrateDialogError("");
+
+    const result = await bridge.vaultMigrate({ masterPassword });
+    if (passwordInput) passwordInput.value = "";
+
+    if (!result || !result.success) {
+      setMigrateDialogError((result && result.error) || "Migration failed.");
+      return;
+    }
+
+    await refreshVaultStatus();
+    renderVaultStatusBar();
+    await refreshStore();
+    renderManager();
+    closeMigrateDialog();
   }
 
   function setVaultDialogError(message) {
@@ -517,6 +593,7 @@ const Passwords = (function () {
     if (manager) manager.classList.remove("open");
     closeFormDialog();
     closeVaultDialog();
+    closeMigrateDialog();
   }
 
   async function init() {
@@ -527,6 +604,11 @@ const Passwords = (function () {
       const vault = document.getElementById("pwVaultBackdrop");
       if (vault && vault.classList.contains("open")) {
         closeVaultDialog();
+        return;
+      }
+      const migrate = document.getElementById("pwMigrateBackdrop");
+      if (migrate && migrate.classList.contains("open")) {
+        closeMigrateDialog();
         return;
       }
       const form = document.getElementById("pwFormBackdrop");
@@ -556,7 +638,10 @@ const Passwords = (function () {
     openVaultUnlockDialog,
     closeVaultDialog,
     submitVaultDialog,
-    lockVault
+    lockVault,
+    openMigrateDialog,
+    closeMigrateDialog,
+    submitMigrateDialog
   };
 })();
 
