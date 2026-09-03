@@ -209,6 +209,9 @@ const Settings = (function () {
       const homeSearch = document.getElementById("homesearch");
       if (homeSearch) homeSearch.value = "";
       if (typeof onHomePage !== "undefined") onHomePage = true;
+      if (window.Autofill && typeof Autofill.onShellHomeShown === "function") {
+        Autofill.onShellHomeShown();
+      }
       if (window.Bookmarks) Bookmarks.onPageChanged();
       return;
     }

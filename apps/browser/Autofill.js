@@ -5,6 +5,7 @@
  * C.2 step 2: autofill offer UI (no credential filling yet).
  * C.2 step 3: user-confirmed credential fill (no auto-fill, no auto-submit).
  * C.2 step 4: post-fill lifecycle suppression (no duplicate offers/reports until navigation).
+ * C.2 step 5: dismiss offer on Escape and when the home shell is shown.
  */
 
 const Autofill = (function () {
@@ -171,6 +172,16 @@ const Autofill = (function () {
 
   function dismissOffer() {
     hideOfferPrompt();
+  }
+
+  function onShellHomeShown() {
+    hideOfferPrompt();
+  }
+
+  function bindKeyboard() {
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") dismissOffer();
+    });
   }
 
   async function lookupCredentialForFill(id, pageOrigin) {
@@ -540,6 +551,7 @@ const Autofill = (function () {
     await refreshSettingsFlags();
     await refreshNeverSave();
     bindWebview();
+    bindKeyboard();
   }
 
   return {
@@ -551,6 +563,7 @@ const Autofill = (function () {
     lookupOfferCandidates,
     showOfferPrompt,
     dismissOffer,
+    onShellHomeShown,
     fillSelected,
     isInternalAppUrl,
     INTERNAL_APP_PREFIXES

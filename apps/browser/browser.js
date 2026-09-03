@@ -26,6 +26,9 @@ function goBack() {
         document.getElementById("home").style.display = "block";
         document.getElementById("url").value = "";
         onHomePage = true;
+        if (window.Autofill && typeof Autofill.onShellHomeShown === "function") {
+            Autofill.onShellHomeShown();
+        }
         if (window.Bookmarks) Bookmarks.onPageChanged();
     }
 }
@@ -150,6 +153,9 @@ function newTab(){
     document.getElementById("home").style.display = "block";
     document.getElementById("homesearch").value = "";
     onHomePage = true;
+    if (window.Autofill && typeof Autofill.onShellHomeShown === "function") {
+        Autofill.onShellHomeShown();
+    }
     if (window.Bookmarks) Bookmarks.onPageChanged();
 }
 
