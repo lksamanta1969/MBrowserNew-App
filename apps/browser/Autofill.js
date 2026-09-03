@@ -34,7 +34,11 @@ const Autofill = (function () {
 
   function ensureApi() {
     const bridge = window.electronAPI || null;
-    if (!bridge || typeof bridge.passwordsGet !== "function") {
+    if (
+      !bridge ||
+      typeof bridge.passwordsMatch !== "function" ||
+      typeof bridge.passwordsRetrieveForFill !== "function"
+    ) {
       return null;
     }
     return bridge;
@@ -188,18 +192,15 @@ const Autofill = (function () {
     const bridge = ensureApi();
     if (!bridge || !id || !pageOrigin) return null;
 
-    const result = await bridge.passwordsGet();
-    const entries = (result && result.data && result.data.entries) || [];
-    const entry = entries.find((item) => {
-      if (item.id !== id) return false;
-      const entryOrigin = normalizeOriginValue(item.origin || item.url);
-      return entryOrigin && entryOrigin === pageOrigin;
+    const result = await bridge.passwordsRetrieveForFill({
+      id,
+      origin: pageOrigin
     });
-    if (!entry) return null;
+    if (!result || !result.success || !result.data) return null;
 
     return {
-      username: String(entry.username || ""),
-      password: String(entry.password || "")
+      username: String(result.data.username || ""),
+      password: String(result.data.password || "")
     };
   }
 
@@ -350,14 +351,13 @@ const Autofill = (function () {
     const bridge = ensureApi();
     if (!bridge) return [];
 
-    const result = await bridge.passwordsGet();
-    const entries = (result && result.data && result.data.entries) || [];
-    return entries
-      .filter((entry) => {
-        const entryOrigin = normalizeOriginValue(entry.origin || entry.url);
-        return entryOrigin && entryOrigin === origin;
-      })
-      .map((entry) => toOfferCandidate(entry, origin));
+    const result = await bridge.passwordsMatch({ origin });
+    if (!result || !result.success) return [];
+
+    const matches = (result.data && result.data.matches) || [];
+    return matches
+      .filter((match) => match && match.id)
+      .map((match) => toOfferCandidate(match, origin));
   }
 
   function buildInjectSource() {
