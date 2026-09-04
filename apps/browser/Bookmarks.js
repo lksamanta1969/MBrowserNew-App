@@ -76,7 +76,31 @@ const Bookmarks = (function () {
 
   function findBookmarkByUrl(url) {
     if (!url) return null;
-    return store.bookmarks.find((b) => b.url === url) || null;
+    const stripAppCacheBust = (raw) => {
+      const s = String(raw || "").trim();
+      if (!s) return s;
+      try {
+        const parsed = new URL(s);
+        if (
+          parsed.protocol === "http:" &&
+          parsed.hostname === "localhost" &&
+          parsed.port === "3000" &&
+          /^\/apps\/[^/]+\/index\.html$/i.test(parsed.pathname)
+        ) {
+          parsed.searchParams.delete("v");
+          const qs = parsed.searchParams.toString();
+          parsed.search = qs ? "?" + qs : "";
+          return parsed.href;
+        }
+      } catch (e) {
+        /* ignore invalid URLs */
+      }
+      return s;
+    };
+    const probe = stripAppCacheBust(url);
+    return (
+      store.bookmarks.find((b) => stripAppCacheBust(b.url) === probe) || null
+    );
   }
 
   function getFolder(id) {

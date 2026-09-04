@@ -316,6 +316,31 @@ function createBookmarkId(prefix) {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Strip openApp cache-bust (?v=) so internal MBrowser app bookmarks dedupe correctly. */
+function normalizeBookmarkUrl(url) {
+    const raw = String(url || "").trim();
+    if (!raw) return raw;
+
+    try {
+        const parsed = new URL(raw);
+        if (
+            parsed.protocol === "http:" &&
+            parsed.hostname === "localhost" &&
+            parsed.port === "3000" &&
+            /^\/apps\/[^/]+\/index\.html$/i.test(parsed.pathname)
+        ) {
+            parsed.searchParams.delete("v");
+            const qs = parsed.searchParams.toString();
+            parsed.search = qs ? "?" + qs : "";
+            return parsed.href;
+        }
+    } catch (e) {
+        /* ignore invalid URLs */
+    }
+
+    return raw;
+}
+
 function defaultBookmarksData() {
     return {
         version: 1,
@@ -567,13 +592,15 @@ ipcMain.handle("bookmarks:add", async (event, payload) => {
             return { success: false, error: "Folder not found." };
         }
 
-        const url = (payload.url || "").trim();
+        const url = normalizeBookmarkUrl((payload.url || "").trim());
         if (!url) {
             return { success: false, error: "URL is required." };
         }
 
         const existing = data.bookmarks.find(
-            (b) => b.url === url && b.folderId === folderId
+            (b) =>
+                normalizeBookmarkUrl(b.url) === url &&
+                b.folderId === folderId
         );
         if (existing) {
             return { success: true, data, bookmark: existing, alreadyExists: true };
@@ -614,10 +641,28 @@ ipcMain.handle("bookmarks:update", async (event, payload) => {
             return { success: false, error: "Folder not found." };
         }
 
+        const nextUrl =
+            payload.url !== undefined
+                ? normalizeBookmarkUrl(String(payload.url).trim()) || current.url
+                : current.url;
+
+        const duplicate = data.bookmarks.find(
+            (b) =>
+                b.id !== payload.id &&
+                normalizeBookmarkUrl(b.url) === nextUrl &&
+                b.folderId === nextFolderId
+        );
+        if (duplicate) {
+            return {
+                success: false,
+                error: "A bookmark with this URL already exists in that folder."
+            };
+        }
+
         data.bookmarks[index] = {
             ...current,
             title: payload.title !== undefined ? String(payload.title).trim() || current.title : current.title,
-            url: payload.url !== undefined ? String(payload.url).trim() || current.url : current.url,
+            url: nextUrl,
             folderId: nextFolderId
         };
 
