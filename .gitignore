@@ -1,8 +1,10 @@
 node_modules/
 .env
 maildb.json
+maildb.json.bak.*
 mpaydb.json
 mnotes.json
+mnotes.json.bak.*
 mtubedb.json
 
 dist/
