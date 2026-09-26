@@ -13,6 +13,7 @@
     "test:vault-access": "node vault/test-vault-access.js"
   },
   "dependencies": {
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "firebase": "^12.14.0",
