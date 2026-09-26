@@ -113,6 +113,8 @@ body.dark .mail-card.mail-unread { background:#363652; border-left-color:#60a5fa
 body.dark .mail-card.mail-starred { border-left-color:#facc15; }
 body.dark .mail-card.mail-important { box-shadow:inset 0 0 0 1px #d97706; }
 body.dark .mail-important-badge { color:#fdba74; background:#3d2f1f; border-color:#92400e; }
+.mail-card.selected { background:#fff7ed; outline:2px solid #fdba74; outline-offset:-2px; }
+body.dark .mail-card.selected { background:#3d2f1f; outline-color:#b45309; }
 .bulk-toolbar button.flag-btn { background:#6366f1; color:#fff; }
 .trash-actions button.flag-btn { background:#6366f1; color:#fff; }
 body.dark .bulk-toolbar button.flag-btn,
@@ -445,10 +447,18 @@ function syncVisibleMessageIds(ids) {
     pruneSelectionToVisible();
 }
 
+function syncMailCardSelectedVisual(checkbox, selected) {
+    const card = checkbox && checkbox.closest(".mail-card");
+    if (card) card.classList.toggle("selected", !!selected);
+}
+
 function toggleMessageSelection(id, checked) {
     if (!id) return;
     if (checked) selectedMessageIds.add(id);
     else selectedMessageIds.delete(id);
+    document.querySelectorAll(".mail-select-checkbox").forEach((box) => {
+        if (box.dataset.messageId === id) syncMailCardSelectedVisual(box, checked);
+    });
     updateBulkToolbar();
     updateSelectAllCheckbox();
 }
@@ -462,6 +472,7 @@ function setSelectAllVisible(checked) {
     document.querySelectorAll(".mail-select-checkbox").forEach((box) => {
         if (visibleMessageIds.includes(box.dataset.messageId)) {
             box.checked = checked;
+            syncMailCardSelectedVisual(box, checked);
         }
     });
     updateBulkToolbar();
@@ -1016,6 +1027,7 @@ function renderSelectableMailList(options) {
         checkbox.className = "mail-select-checkbox";
         checkbox.dataset.messageId = item.id || "";
         checkbox.checked = item.id ? selectedMessageIds.has(item.id) : false;
+        if (checkbox.checked) card.classList.add("selected");
         if (!item.id) {
             checkbox.disabled = true;
             checkbox.title = "Message id unavailable";
