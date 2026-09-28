@@ -29,6 +29,51 @@ function toggleApps() {
     menu.style.display = menu.style.display === "flex" ? "none" : "flex";
 }
 
+function reopenClosedTab() {
+    BrowserTab.reopenClosed();
+}
+
+function shellTabShortcutAllowed(event) {
+    const target = event.target;
+    if (
+        target &&
+        (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT" ||
+            target.isContentEditable)
+    ) {
+        return false;
+    }
+    const isOpen = (id) => {
+        const el = document.getElementById(id);
+        return !!(el && el.classList.contains("open"));
+    };
+    if (
+        isOpen("settingsManager") ||
+        isOpen("bookmarkManager") ||
+        isOpen("historyManager") ||
+        isOpen("downloadsManager") ||
+        isOpen("passwordManager") ||
+        isOpen("ldSavePrompt") ||
+        isOpen("ldUpdatePrompt") ||
+        isOpen("afOfferPrompt")
+    ) {
+        return false;
+    }
+    return true;
+}
+
+document.addEventListener("keydown", (event) => {
+    if (!event.ctrlKey || event.altKey || event.metaKey) return;
+    if (!shellTabShortcutAllowed(event)) return;
+    if (event.key === "T" || event.key === "t") {
+        if (event.shiftKey) {
+            event.preventDefault();
+            reopenClosedTab();
+        }
+    }
+});
+
 document.addEventListener("DOMContentLoaded", () => BrowserTab.init());
 window.onload = async function () {
     BrowserTab.init();

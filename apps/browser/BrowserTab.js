@@ -1,9 +1,49 @@
 /* Tab pages stay mounted: switching tabs never reloads their contents. */
+const CLOSED_TAB_STACK_MAX = 10; /* Recently closed tabs kept for Ctrl+Shift+T. */
+
 class BrowserTabs {
     constructor() {
         this.tabs = [];
         this.active = null;
         this.nextId = 1;
+        this.closedTabs = [];
+    }
+
+    captureClosedSnapshot(tab) {
+        if (tab === this.active) {
+            tab.address = document.getElementById("url").value;
+            tab.homeSearch = document.getElementById("homesearch").value;
+        }
+        return {
+            home: !!tab.home,
+            url: tab.url || "",
+            address: tab.address || "",
+            title: tab.title || "New Tab",
+            homeSearch: tab.homeSearch || ""
+        };
+    }
+
+    pushClosedSnapshot(snapshot) {
+        this.closedTabs.push(snapshot);
+        if (this.closedTabs.length > CLOSED_TAB_STACK_MAX) this.closedTabs.shift();
+    }
+
+    reopenClosed() {
+        const snapshot = this.closedTabs.pop();
+        if (!snapshot) return false;
+        const tab = this.create(null, false);
+        if (snapshot.home) {
+            tab.homeSearch = snapshot.homeSearch;
+            tab.title = snapshot.title || "New Tab";
+            document.getElementById("homesearch").value = snapshot.homeSearch;
+            this.paint(tab);
+        } else {
+            const url = snapshot.url || snapshot.address;
+            tab.title = snapshot.title || url || "New Tab";
+            if (url) this.navigate(url);
+            else this.paint(tab);
+        }
+        return true;
     }
 
     init() {
@@ -149,7 +189,8 @@ class BrowserTabs {
     close(tab) {
         const index = this.tabs.indexOf(tab);
         if (index < 0) return;
-        if (this.tabs.length === 1) this.create();
+        this.pushClosedSnapshot(this.captureClosedSnapshot(tab));
+        if (this.tabs.length === 1) this.create(null, false);
         else if (tab === this.active) this.activate(this.tabs[index + 1] || this.tabs[index - 1]);
         window.Autofill?.dispose(tab.view);
         window.LoginDetection?.dispose(tab.view);
