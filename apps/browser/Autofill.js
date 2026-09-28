@@ -8,7 +8,7 @@
  * C.2 step 5: dismiss offer on Escape and when the home shell is shown.
  */
 
-const Autofill = (function () {
+const Autofill = createTabService(function (webview, isActive) {
   const INJECT_DEBOUNCE_MS = 250;
 
   /** Centralized internal-app exclusion (localhost MBrowser apps). */
@@ -22,7 +22,21 @@ const Autofill = (function () {
     "http://localhost:3000/apps/mcalender/"
   ];
 
-  let webview = null;
+  const listeners = new AbortController();
+  let epoch = 0;
+  function context() {
+    let url = "";
+    try { url = webview.getURL(); } catch (_) { /* Guest not ready. */ }
+    return { epoch, url };
+  }
+  function current(ctx) {
+    return isActive() && ctx.epoch === epoch && ctx.url === context().url;
+  }
+  function listen(type, handler) {
+    webview.addEventListener(type, event => {
+      if (isActive()) handler(event);
+    }, { signal: listeners.signal });
+  }
   let injectTimer = null;
   let lastReportedSignature = "";
   let activePageUrl = "";
@@ -90,6 +104,8 @@ const Autofill = (function () {
   }
 
   function hideOfferPrompt() {
+    activeOffer = null;
+    if (!isActive()) return;
     const prompt = document.getElementById("afOfferPrompt");
     if (prompt) prompt.classList.remove("open");
     activeOffer = null;
@@ -131,6 +147,7 @@ const Autofill = (function () {
   }
 
   function showOfferPrompt(candidates, pageOrigin, pageUrl) {
+    if (!isActive()) return;
     if (!candidates || !candidates.length) {
       hideOfferPrompt();
       return;
@@ -184,8 +201,8 @@ const Autofill = (function () {
 
   function bindKeyboard() {
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") dismissOffer();
-    });
+      if (isActive() && e.key === "Escape") dismissOffer();
+    }, { signal: listeners.signal });
   }
 
   async function lookupCredentialForFill(id, pageOrigin) {
@@ -204,7 +221,8 @@ const Autofill = (function () {
     };
   }
 
-  async function invokeGuestFill(credential) {
+  async function invokeGuestFill(credential, ctx) {
+    if (!current(ctx)) return { ok: false };
     if (!webview || !credential) {
       return { ok: false, filledUsername: false, filledPassword: false };
     }
@@ -217,6 +235,7 @@ const Autofill = (function () {
     try {
       return await webview.executeJavaScript(
         `(function(){
+          if (location.href !== ${JSON.stringify(ctx.url)}) return { ok: false };
           if (!window.__MB_AF || typeof window.__MB_AF.applyFill !== "function") {
             return { ok: false, filledUsername: false, filledPassword: false };
           }
@@ -230,6 +249,8 @@ const Autofill = (function () {
   }
 
   async function fillSelected() {
+    const ctx = context();
+    if (!current(ctx)) return;
     if (!activeOffer || !activeOffer.selectedId || !webview) return;
 
     const selectedId = activeOffer.selectedId;
@@ -255,15 +276,18 @@ const Autofill = (function () {
       return;
     }
 
+    if (!current(ctx)) return;
     let credential = await lookupCredentialForFill(selectedId, pageOrigin);
+    if (!current(ctx)) { credential = null; return; }
     if (!credential || !credential.password) {
       console.log("[Autofill] Fill failed");
       return;
     }
 
-    const fillResult = await invokeGuestFill(credential);
+    const fillResult = await invokeGuestFill(credential, ctx);
     credential = null;
 
+    if (!current(ctx)) return;
     if (fillResult && fillResult.ok) {
       console.log("[Autofill] Filled");
       lifecycleOfferSuppressed = true;
@@ -316,6 +340,7 @@ const Autofill = (function () {
   }
 
   function shouldRunDetection(url) {
+    if (!isActive()) return false;
     if (!webview) return false;
     if (isHomeVisible()) return false;
     if (typeof onHomePage !== "undefined" && onHomePage) return false;
@@ -402,6 +427,8 @@ const Autofill = (function () {
   }
 
   async function handleDetectionResult(result) {
+    const ctx = context();
+    if (!current(ctx) || (result && result.url && result.url !== ctx.url)) return;
     if (!result || !result.hasLoginForm) {
       if (!result || !result.hasPasswordField) {
         lastReportedSignature = "";
@@ -428,6 +455,7 @@ const Autofill = (function () {
     console.log("[Autofill] Form detected");
 
     const offer = await evaluateDetectionOffer(result);
+    if (!current(ctx)) return;
     if (!offer.allowed || !offer.candidates.length) {
       hideOfferPrompt();
       return;
@@ -442,6 +470,8 @@ const Autofill = (function () {
   }
 
   async function pollGuestStatus() {
+    const ctx = context();
+    if (!current(ctx)) return;
     if (!webview) return;
     try {
       const result = await webview.executeJavaScript(
@@ -451,13 +481,15 @@ const Autofill = (function () {
         })()`,
         true
       );
-      if (result) await handleDetectionResult(result);
+      if (current(ctx) && result) await handleDetectionResult(result);
     } catch (e) {
       /* cross-origin or destroyed guest */
     }
   }
 
   async function injectDetector() {
+    const ctx = context();
+    if (!current(ctx)) return;
     if (!webview) return;
 
     let currentUrl = "";
@@ -481,7 +513,9 @@ const Autofill = (function () {
 
     try {
       const initial = await webview.executeJavaScript(source, true);
+      if (!current(ctx)) return;
       if (initial) await handleDetectionResult(initial);
+      if (!current(ctx)) return;
 
       let guestUrl = "";
       try {
@@ -498,6 +532,7 @@ const Autofill = (function () {
   }
 
   function scheduleInject() {
+    if (!isActive()) return;
     if (injectTimer) clearTimeout(injectTimer);
     injectTimer = setTimeout(() => {
       injectTimer = null;
@@ -506,29 +541,35 @@ const Autofill = (function () {
   }
 
   async function onNavigation(url) {
+    epoch++;
+    const ctx = context();
     lastReportedSignature = "";
     lifecycleOfferSuppressed = false;
     hideOfferPrompt();
     await cleanupGuest();
-    scheduleInject();
+    if (current(ctx)) scheduleInject();
   }
 
   function bindWebview() {
-    webview = document.getElementById("browser");
+    listen("did-start-navigation", event => {
+      if (event.isMainFrame === false) return;
+      epoch++;
+      hideOfferPrompt();
+    });
     if (!webview) return;
 
-    webview.addEventListener("ipc-message", (event) => {
+    listen("ipc-message", (event) => {
       if (!event || event.channel !== "af:form-detected") return;
       const payload = event.args && event.args[0];
       if (!payload || !payload.hasLoginForm) return;
       handleDetectionResult(payload);
     });
 
-    webview.addEventListener("dom-ready", () => {
+    listen("dom-ready", () => {
       scheduleInject();
     });
 
-    webview.addEventListener("did-finish-load", () => {
+    listen("did-finish-load", () => {
       try {
         onNavigation(webview.getURL ? webview.getURL() : "");
       } catch (e) {
@@ -536,12 +577,12 @@ const Autofill = (function () {
       }
     });
 
-    webview.addEventListener("did-navigate", (e) => {
+    listen("did-navigate", (e) => {
       if (e && e.url) onNavigation(e.url);
       else scheduleInject();
     });
 
-    webview.addEventListener("did-navigate-in-page", (e) => {
+    listen("did-navigate-in-page", (e) => {
       if (e && e.url) onNavigation(e.url);
       else scheduleInject();
     });
@@ -554,7 +595,22 @@ const Autofill = (function () {
     bindKeyboard();
   }
 
+
+  function suspend() {
+    epoch++;
+    if (injectTimer) clearTimeout(injectTimer);
+    hideOfferPrompt();
+    lastReportedSignature = "";
+  }
+  function resume() {
+    if (!isActive()) return;
+    if (context().url !== activePageUrl) onNavigation(context().url);
+    else scheduleInject();
+  }
+  function dispose() { suspend(); listeners.abort(); }
+
   return {
+    suspend, resume, dispose,
     init,
     refreshSettingsFlags,
     refreshNeverSave,
@@ -568,6 +624,6 @@ const Autofill = (function () {
     isInternalAppUrl,
     INTERNAL_APP_PREFIXES
   };
-})();
+});
 
 window.Autofill = Autofill;

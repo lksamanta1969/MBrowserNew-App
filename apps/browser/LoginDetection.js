@@ -4,11 +4,25 @@
  * Does NOT autofill or inject passwords.
  */
 
-const LoginDetection = (function () {
+const LoginDetection = createTabService(function (webview, isActive) {
   const CAPTURE_TTL_MS = 45000;
   const LOGIN_PATH_RE = /\/(login|log-in|signin|sign-in|sign_in|auth|authenticate|session|account\/login|user\/login)(\/|$|\?|#)/i;
 
-  let webview = null;
+  const listeners = new AbortController();
+  let epoch = 0;
+  function context() {
+    let url = "";
+    try { url = webview.getURL(); } catch (_) { /* Guest not ready. */ }
+    return { epoch, url };
+  }
+  function current(ctx) {
+    return isActive() && ctx.epoch === epoch && ctx.url === context().url;
+  }
+  function listen(type, handler) {
+    webview.addEventListener(type, event => {
+      if (isActive()) handler(event);
+    }, { signal: listeners.signal });
+  }
   let enabled = true;
   let offerToSave = true;
   let neverSaveOrigins = new Set();
@@ -254,6 +268,7 @@ const LoginDetection = (function () {
   }
 
   async function injectCapture() {
+    if (!isActive()) return;
     if (!webview) return;
     try {
       const home = document.getElementById("home");
@@ -276,6 +291,7 @@ const LoginDetection = (function () {
   }
 
   function scheduleInject() {
+    if (!isActive()) return;
     if (injectTimer) clearTimeout(injectTimer);
     injectTimer = setTimeout(() => {
       injectTimer = null;
@@ -366,6 +382,8 @@ const LoginDetection = (function () {
   }
 
   function hidePrompts() {
+    activePrompt = null;
+    if (!isActive()) return;
     const savePrompt = document.getElementById("ldSavePrompt");
     const updatePrompt = document.getElementById("ldUpdatePrompt");
     if (savePrompt) savePrompt.classList.remove("open");
@@ -374,6 +392,7 @@ const LoginDetection = (function () {
   }
 
   function showSavePrompt(candidate, existing) {
+    if (!isActive()) return;
     hidePrompts();
     activePrompt = { candidate, existing: existing || null };
     const hostLabel = displayHostname(candidate);
@@ -439,7 +458,10 @@ const LoginDetection = (function () {
   }
 
   async function handlePossibleSuccess(currentUrl) {
+    const ctx = context();
+    if (!current(ctx)) return;
     await refreshSettingsFlags();
+    if (!current(ctx)) return;
     if (!enabled || !offerToSave) {
       return;
     }
@@ -451,6 +473,7 @@ const LoginDetection = (function () {
     }
 
     const candidate = await peekPending();
+    if (!current(ctx)) return;
     if (!candidate) {
       return;
     }
@@ -470,17 +493,22 @@ const LoginDetection = (function () {
 
     // Re-inject so hasPasswordForm works after navigation
     await injectCapture();
+    if (!current(ctx)) return;
     const stillHasForm = await pageHasPasswordForm();
+    if (!current(ctx)) return;
     if (!isSuccessfulLogin(candidate, currentUrl, stillHasForm)) return;
 
     lastHandledKey = key;
     await clearPending();
+    if (!current(ctx)) return;
 
     if (await isEncryptedVaultLocked()) {
       return;
     }
 
+    if (!current(ctx)) return;
     const existing = await findExisting(candidate);
+    if (!current(ctx)) return;
     if (existing && existing.password === candidate.password) return;
 
     showSavePrompt(
@@ -494,6 +522,7 @@ const LoginDetection = (function () {
   }
 
   async function saveCandidate() {
+    if (!isActive()) return;
     const bridge = ensureApi();
     if (!bridge || !activePrompt || !activePrompt.candidate) return;
     const candidate = activePrompt.candidate;
@@ -533,6 +562,7 @@ const LoginDetection = (function () {
   }
 
   async function neverSaveCandidate() {
+    if (!isActive()) return;
     const bridge = ensureApi();
     if (!bridge || !activePrompt || !activePrompt.candidate) {
       hidePrompts();
@@ -553,17 +583,22 @@ const LoginDetection = (function () {
   }
 
   function onNavigated(url) {
+    const ctx = context();
     scheduleInject();
     setTimeout(() => {
-      handlePossibleSuccess(url || "");
+      if (current(ctx)) handlePossibleSuccess(url || "");
     }, 500);
   }
 
   function bindWebview() {
-    webview = document.getElementById("browser");
+    listen("did-start-navigation", event => {
+      if (event.isMainFrame === false) return;
+      epoch++;
+      hidePrompts();
+    });
     if (!webview) return;
 
-    webview.addEventListener("ipc-message", (event) => {
+    listen("ipc-message", (event) => {
       if (!event || event.channel !== "ld:pending") return;
       const payload = event.args && event.args[0];
       if (!payload || !payload.password || !payload.username) {
@@ -576,21 +611,23 @@ const LoginDetection = (function () {
         ...payload,
         submittedAt: payload.submittedAt || Date.now()
       };
+      const ctx = context();
       setTimeout(() => {
+        if (!current(ctx)) return;
         try {
           const url = webview.getURL ? webview.getURL() : "";
-          handlePossibleSuccess(url || "");
+          if (current(ctx)) handlePossibleSuccess(url || "");
         } catch (e) {
           /* ignore */
         }
       }, 700);
     });
 
-    webview.addEventListener("dom-ready", () => {
+    listen("dom-ready", () => {
       scheduleInject();
     });
 
-    webview.addEventListener("did-finish-load", () => {
+    listen("did-finish-load", () => {
       scheduleInject();
       try {
         onNavigated(webview.getURL());
@@ -599,11 +636,11 @@ const LoginDetection = (function () {
       }
     });
 
-    webview.addEventListener("did-navigate", (e) => {
+    listen("did-navigate", (e) => {
       if (e && e.url) onNavigated(e.url);
     });
 
-    webview.addEventListener("did-navigate-in-page", (e) => {
+    listen("did-navigate-in-page", (e) => {
       if (e && e.url) onNavigated(e.url);
     });
   }
@@ -614,11 +651,25 @@ const LoginDetection = (function () {
     bindWebview();
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") dismissPrompt();
-    });
+      if (isActive() && e.key === "Escape") dismissPrompt();
+    }, { signal: listeners.signal });
   }
 
+
+  function suspend() {
+    epoch++;
+    if (injectTimer) clearTimeout(injectTimer);
+    hidePrompts();
+  }
+  function resume() {
+    if (!isActive()) return;
+    scheduleInject();
+    try { onNavigated(webview.getURL()); } catch (_) { /* Guest not ready. */ }
+  }
+  function dispose() { suspend(); hostPending = null; listeners.abort(); }
+
   return {
+    suspend, resume, dispose,
     init,
     saveCandidate,
     neverSaveCandidate,
@@ -628,6 +679,6 @@ const LoginDetection = (function () {
     refreshSettingsFlags,
     refreshNeverSave
   };
-})();
+});
 
 window.LoginDetection = LoginDetection;

@@ -197,22 +197,7 @@ const Settings = (function () {
   function openHomepage() {
     const homepage = getHomepage();
     if (!homepage || homepage === "mbrowser://home") {
-      const browser = document.getElementById("browser");
-      if (browser) {
-        browser.src = "";
-        browser.style.display = "none";
-      }
-      const home = document.getElementById("home");
-      if (home) home.style.display = "block";
-      const urlInput = document.getElementById("url");
-      if (urlInput) urlInput.value = "";
-      const homeSearch = document.getElementById("homesearch");
-      if (homeSearch) homeSearch.value = "";
-      if (typeof onHomePage !== "undefined") onHomePage = true;
-      if (window.Autofill && typeof Autofill.onShellHomeShown === "function") {
-        Autofill.onShellHomeShown();
-      }
-      if (window.Bookmarks) Bookmarks.onPageChanged();
+      BrowserTab.showHome();
       return;
     }
     const urlInput = document.getElementById("url");
@@ -227,14 +212,7 @@ const Settings = (function () {
       return "homepage";
     }
     if (behavior === "blank") {
-      const browser = document.getElementById("browser");
-      if (browser) {
-        browser.src = "about:blank";
-        browser.style.display = "flex";
-      }
-      document.getElementById("home").style.display = "none";
-      document.getElementById("url").value = "";
-      if (typeof onHomePage !== "undefined") onHomePage = false;
+      BrowserTab.navigate("about:blank");
       return "blank";
     }
     // default home

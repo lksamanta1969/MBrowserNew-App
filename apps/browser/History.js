@@ -212,7 +212,6 @@ const History = (function () {
 
     const cleanUrl = String(url || "").trim();
     if (!cleanUrl || cleanUrl === "about:blank") return;
-    if (typeof onHomePage !== "undefined" && onHomePage) return;
 
     const result = await bridge.historyRecord({
       url: cleanUrl,

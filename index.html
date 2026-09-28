@@ -20,8 +20,8 @@
       
   <div class="header">
     <div class="tabs">
-      <div class="tab active" onclick="newTab()">New Tab</div>
-      <button class="addtab" onclick="newTab()">+</button>
+      <div id="tabList" role="tablist" aria-label="Browser tabs"></div>
+      <button class="addtab" aria-label="New tab" onclick="newTab()">+</button>
     </div>
     <div class="topbar">
       <button onclick="goBack()">←</button>
