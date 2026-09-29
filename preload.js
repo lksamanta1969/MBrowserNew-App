@@ -208,3 +208,51 @@ contextBridge.exposeInMainWorld(
     }
   }
 );
+
+/* Tab webview guests only: forward browser shortcuts to the shell embedder. */
+(function registerGuestTabShortcuts() {
+  const { isTabWebviewGuestPreload } = require(path.join(
+    __dirname,
+    "apps/browser/guest-preload-context.cjs"
+  ));
+  const hasSendToHost = typeof ipcRenderer.sendToHost === "function";
+  if (!isTabWebviewGuestPreload(window.location.href, hasSendToHost)) return;
+
+  const { shouldForwardGuestTabShortcut } = require(path.join(
+    __dirname,
+    "apps/browser/guest-tab-shortcut-policy.cjs"
+  ));
+
+  const CHANNEL = "browser-tab-shortcut";
+
+  function guestFocusEditable() {
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = el.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+    if (el.isContentEditable) return true;
+    return false;
+  }
+
+  function resolveAction(event) {
+    if (!event.ctrlKey || event.altKey || event.metaKey) return null;
+    const key = event.key;
+    if (key === "T" || key === "t") return event.shiftKey ? "reopen-tab" : "new-tab";
+    if ((key === "W" || key === "w") && !event.shiftKey) return "close-tab";
+    if (key === "Tab" && !event.shiftKey) return "next-tab";
+    return null;
+  }
+
+  window.addEventListener(
+    "keydown",
+    (event) => {
+      const action = resolveAction(event);
+      if (!action) return;
+      if (!shouldForwardGuestTabShortcut(action, guestFocusEditable())) return;
+      event.preventDefault();
+      event.stopPropagation();
+      ipcRenderer.sendToHost(CHANNEL, action);
+    },
+    true
+  );
+})();

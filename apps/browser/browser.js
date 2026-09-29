@@ -33,45 +33,43 @@ function reopenClosedTab() {
     BrowserTab.reopenClosed();
 }
 
-function shellTabShortcutAllowed(event) {
-    const target = event.target;
-    if (
-        target &&
-        (target.tagName === "INPUT" ||
-            target.tagName === "TEXTAREA" ||
-            target.tagName === "SELECT" ||
-            target.isContentEditable)
-    ) {
-        return false;
+function executeBrowserTabShortcutAction(action) {
+    switch (action) {
+        case "new-tab":
+            newTab();
+            return true;
+        case "close-tab":
+            if (BrowserTab.active) BrowserTab.close(BrowserTab.active);
+            return true;
+        case "next-tab":
+            BrowserTab.activateRelative(1);
+            return true;
+        case "reopen-tab":
+            reopenClosedTab();
+            return true;
+        default:
+            return false;
     }
-    const isOpen = (id) => {
-        const el = document.getElementById(id);
-        return !!(el && el.classList.contains("open"));
-    };
-    if (
-        isOpen("settingsManager") ||
-        isOpen("bookmarkManager") ||
-        isOpen("historyManager") ||
-        isOpen("downloadsManager") ||
-        isOpen("passwordManager") ||
-        isOpen("ldSavePrompt") ||
-        isOpen("ldUpdatePrompt") ||
-        isOpen("afOfferPrompt")
-    ) {
-        return false;
-    }
-    return true;
 }
 
-document.addEventListener("keydown", (event) => {
-    if (!event.ctrlKey || event.altKey || event.metaKey) return;
-    if (!shellTabShortcutAllowed(event)) return;
-    if (event.key === "T" || event.key === "t") {
-        if (event.shiftKey) {
-            event.preventDefault();
-            reopenClosedTab();
-        }
+function applyBrowserTabShortcut(action, source) {
+    const shortcuts = window.ShellTabShortcuts;
+    if (!shortcuts || !shortcuts.isValidAction(action)) return;
+    if (source === "guest") {
+        if (!shortcuts.shellTabShortcutAllowedForGuestForward()) return;
     }
+    executeBrowserTabShortcutAction(action);
+}
+window.applyBrowserTabShortcut = applyBrowserTabShortcut;
+
+document.addEventListener("keydown", (event) => {
+    const shortcuts = window.ShellTabShortcuts;
+    if (!shortcuts) return;
+    const action = shortcuts.resolveKeyboardShortcutAction(event);
+    if (!action) return;
+    if (!shortcuts.shellTabShortcutAllowed(event)) return;
+    event.preventDefault();
+    executeBrowserTabShortcutAction(action);
 });
 
 document.addEventListener("DOMContentLoaded", () => BrowserTab.init());

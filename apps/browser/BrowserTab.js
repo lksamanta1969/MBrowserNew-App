@@ -113,6 +113,16 @@ class BrowserTabs {
         this.applyZoom(tab);
     }
 
+    activateRelative(delta) {
+        if (!this.tabs.length || !this.active || !delta) return false;
+        const index = this.tabs.indexOf(this.active);
+        if (index < 0) return false;
+        const nextIndex = (index + delta + this.tabs.length) % this.tabs.length;
+        if (nextIndex === index) return false;
+        this.activate(this.tabs[nextIndex]);
+        return true;
+    }
+
     applyZoom(tab) {
         try {
             if (window.Settings) tab.view.setZoomFactor(Number(Settings.get("general.defaultZoom", 100)) / 100);
@@ -224,6 +234,14 @@ class BrowserTabs {
             this.paint(tab);
         });
         tab.view.addEventListener("dom-ready", () => this.applyZoom(tab));
+        tab.view.addEventListener("ipc-message", (event) => {
+            if (event.channel !== "browser-tab-shortcut") return;
+            if (tab !== this.active) return;
+            const action = event.args && event.args[0];
+            if (typeof window.applyBrowserTabShortcut === "function") {
+                window.applyBrowserTabShortcut(action, "guest");
+            }
+        });
     }
 }
 
