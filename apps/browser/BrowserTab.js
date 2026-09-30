@@ -56,7 +56,7 @@ class BrowserTabs {
 
     create(view = null, applySettings = true) {
         if (!view) view = document.createElement("webview");
-        const tab = { id: this.nextId++, view, home: true, title: "New Tab", url: "", address: "", homeSearch: "", loading: false };
+        const tab = { id: this.nextId++, view, home: true, title: "New Tab", url: "", address: "", homeSearch: "", loading: false, loadFailed: false };
         const item = document.createElement("div");
         item.className = "tab";
         const select = document.createElement("button");
@@ -132,6 +132,19 @@ class BrowserTabs {
         }
     }
 
+    syncFailureChrome() {
+        const reloadBtn = document.getElementById("navReloadBtn");
+        if (!reloadBtn) return;
+        const tab = this.active;
+        const failed = !!(tab && tab.loadFailed);
+        if (reloadBtn.classList && typeof reloadBtn.classList.toggle === "function") {
+            reloadBtn.classList.toggle("load-failed", failed);
+        }
+        if (typeof reloadBtn.setAttribute === "function") {
+            reloadBtn.setAttribute("aria-invalid", String(failed));
+        }
+    }
+
     activate(tab) {
         if (!this.tabs.includes(tab) || this.active === tab) return;
         const previous = this.active;
@@ -157,6 +170,7 @@ class BrowserTabs {
         this.applyZoom(tab);
         this.syncNavChrome();
         this.syncLoadChrome();
+        this.syncFailureChrome();
     }
 
     activateRelative(delta) {
@@ -182,6 +196,7 @@ class BrowserTabs {
         window.LoginDetection?.deactivate();
         tab.home = true;
         tab.loading = false;
+        tab.loadFailed = false;
         tab.address = "";
         window.onHomePage = true;
         tab.view.style.display = "none";
@@ -190,6 +205,7 @@ class BrowserTabs {
         window.Bookmarks?.onPageChanged();
         this.paint(tab);
         this.syncLoadChrome();
+        this.syncFailureChrome();
     }
 
     navigate(url) {
@@ -286,16 +302,29 @@ class BrowserTabs {
         const onLoadStart = (event) => {
             if (!loadFrameOk(event) || !this.tabs.includes(tab)) return;
             tab.loading = true;
-            if (tab === this.active) this.syncLoadChrome();
+            tab.loadFailed = false;
+            if (tab === this.active) {
+                this.syncLoadChrome();
+                this.syncFailureChrome();
+            }
         };
         const onLoadStop = (event) => {
             if (!loadFrameOk(event) || !this.tabs.includes(tab)) return;
             tab.loading = false;
             if (tab === this.active) this.syncLoadChrome();
         };
+        const onLoadFail = (event) => {
+            if (!loadFrameOk(event) || !this.tabs.includes(tab)) return;
+            tab.loading = false;
+            if (event.errorCode !== -3) tab.loadFailed = true;
+            if (tab === this.active) {
+                this.syncLoadChrome();
+                this.syncFailureChrome();
+            }
+        };
         tab.view.addEventListener("did-start-loading", onLoadStart);
         tab.view.addEventListener("did-stop-loading", onLoadStop);
-        tab.view.addEventListener("did-fail-load", onLoadStop);
+        tab.view.addEventListener("did-fail-load", onLoadFail);
         tab.view.addEventListener("did-navigate", update);
         tab.view.addEventListener("did-navigate-in-page", update);
         tab.view.addEventListener("page-title-updated", event => {
