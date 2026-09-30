@@ -218,12 +218,10 @@ contextBridge.exposeInMainWorld(
   const hasSendToHost = typeof ipcRenderer.sendToHost === "function";
   if (!isTabWebviewGuestPreload(window.location.href, hasSendToHost)) return;
 
-  const { shouldForwardGuestTabShortcut } = require(path.join(
+  const { createGuestTabShortcutKeydownHandler } = require(path.join(
     __dirname,
     "apps/browser/guest-tab-shortcut-policy.cjs"
   ));
-
-  const CHANNEL = "browser-tab-shortcut";
 
   function guestFocusEditable() {
     const el = document.activeElement;
@@ -234,26 +232,12 @@ contextBridge.exposeInMainWorld(
     return false;
   }
 
-  function resolveAction(event) {
-    if (!event.ctrlKey || event.altKey || event.metaKey) return null;
-    const key = event.key;
-    if (key === "T" || key === "t") return event.shiftKey ? "reopen-tab" : "new-tab";
-    if ((key === "W" || key === "w") && !event.shiftKey) return "close-tab";
-    if (key === "Tab" && event.shiftKey) return "prev-tab";
-    if (key === "Tab" && !event.shiftKey) return "next-tab";
-    return null;
-  }
-
   window.addEventListener(
     "keydown",
-    (event) => {
-      const action = resolveAction(event);
-      if (!action) return;
-      if (!shouldForwardGuestTabShortcut(action, guestFocusEditable())) return;
-      event.preventDefault();
-      event.stopPropagation();
-      ipcRenderer.sendToHost(CHANNEL, action);
-    },
+    createGuestTabShortcutKeydownHandler(
+      (channel, action) => ipcRenderer.sendToHost(channel, action),
+      guestFocusEditable
+    ),
     true
   );
 })();

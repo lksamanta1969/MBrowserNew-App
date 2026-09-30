@@ -4,6 +4,13 @@ function goBack() { BrowserTab.back(); }
 function goForward() { BrowserTab.forward(); }
 function refreshPage() { BrowserTab.reload(); }
 
+function focusAddressBar() {
+    const url = document.getElementById("url");
+    if (!url) return;
+    url.focus();
+    if (typeof url.select === "function") url.select();
+}
+
 function openApp(appName) {
     document.getElementById("appsMenu").style.display = "none";
     BrowserTab.navigate("http://localhost:3000/apps/" + appName + "/index.html?v=" + Date.now());
@@ -61,7 +68,18 @@ function executeBrowserTabShortcutAction(action) {
 
 function applyBrowserTabShortcut(action, source) {
     const shortcuts = window.ShellTabShortcuts;
-    if (!shortcuts || !shortcuts.isValidAction(action)) return;
+    if (!shortcuts) return;
+    if (action === "focus-address-bar") {
+        if (source === "guest" && !shortcuts.shellTabShortcutAllowedForGuestForward()) return;
+        focusAddressBar();
+        return;
+    }
+    if (action === "reload") {
+        if (source === "guest" && !shortcuts.shellTabShortcutAllowedForGuestForward()) return;
+        refreshPage();
+        return;
+    }
+    if (!shortcuts.isValidAction(action)) return;
     if (source === "guest") {
         if (!shortcuts.shellTabShortcutAllowedForGuestForward()) return;
     }
@@ -76,6 +94,12 @@ document.addEventListener("keydown", (event) => {
         if (!shortcuts.shellReloadShortcutAllowed(event)) return;
         event.preventDefault();
         refreshPage();
+        return;
+    }
+    if (shortcuts.isFocusAddressBarShortcut(event)) {
+        if (!shortcuts.shellFocusAddressBarShortcutAllowed(event)) return;
+        event.preventDefault();
+        focusAddressBar();
         return;
     }
     const action = shortcuts.resolveKeyboardShortcutAction(event);

@@ -55,6 +55,17 @@
         return shellTabShortcutAllowed(event, getElementById);
     }
 
+    function isFocusAddressBarShortcut(event) {
+        if (!event) return false;
+        if (!event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return false;
+        const key = event.key;
+        return key === "l" || key === "L";
+    }
+
+    function shellFocusAddressBarShortcutAllowed(event, getElementById) {
+        return shellTabShortcutAllowed(event, getElementById);
+    }
+
     function resolveKeyboardShortcutAction(event) {
         if (!event.ctrlKey || event.altKey || event.metaKey) return null;
         const key = event.key;
@@ -85,6 +96,8 @@
         resolveKeyboardShortcutAction,
         isReloadKeyboardShortcut,
         shellReloadShortcutAllowed,
+        isFocusAddressBarShortcut,
+        shellFocusAddressBarShortcutAllowed,
         isValidAction,
         shouldAcceptGuestShortcut
     };
