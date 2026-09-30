@@ -104,6 +104,33 @@ test("activateRelative(+1) switches to next tab in strip order", () => {
   assert.equal(bt.active.url, "");
 });
 
+test("activateRelative(-1) switches to previous tab in strip order", () => {
+  const h = setup();
+  const bt = h.window.BrowserTab;
+  bt.create(null, false);
+  bt.create(null, false);
+  bt.activate(bt.tabs[0]);
+  bt.navigate("https://example.com/a");
+  bt.activate(bt.tabs[2]);
+  bt.navigate("https://example.com/c");
+  assert.equal(bt.active, bt.tabs[2]);
+  assert.ok(bt.activateRelative(-1));
+  assert.equal(bt.active, bt.tabs[1]);
+  assert.equal(bt.active.url, "");
+});
+
+test("activateRelative(-1) wraps from first tab to last", () => {
+  const h = setup();
+  const bt = h.window.BrowserTab;
+  bt.create(null, false);
+  bt.activate(bt.tabs[0]);
+  bt.navigate("https://example.com/first");
+  assert.equal(bt.active, bt.tabs[0]);
+  assert.ok(bt.activateRelative(-1));
+  assert.equal(bt.active, bt.tabs[1]);
+  assert.equal(bt.active.url, "");
+});
+
 test("activateRelative(+1) wraps from last tab to first", () => {
   const h = setup();
   const bt = h.window.BrowserTab;

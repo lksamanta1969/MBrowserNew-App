@@ -1,5 +1,5 @@
 /* Guest webview tab-shortcut policy (shared by preload + tests). */
-const GUEST_TAB_SHORTCUT_ACTIONS = new Set(["new-tab", "close-tab", "next-tab", "reopen-tab"]);
+const GUEST_TAB_SHORTCUT_ACTIONS = new Set(["new-tab", "close-tab", "next-tab", "prev-tab", "reopen-tab"]);
 
 const BROWSER_LEVEL_WHEN_EDITABLE = new Set(["new-tab", "reopen-tab"]);
 

@@ -1,6 +1,6 @@
 /* Shared shell tab shortcut policy (host + guest forward validation). */
 (function () {
-    const ACTIONS = new Set(["new-tab", "close-tab", "next-tab", "reopen-tab"]);
+    const ACTIONS = new Set(["new-tab", "close-tab", "next-tab", "prev-tab", "reopen-tab"]);
     const SHELL_BROWSER_INPUT_IDS = new Set(["url", "homesearch"]);
     const MANAGER_IDS = [
         "settingsManager",
@@ -50,6 +50,7 @@
             return event.shiftKey ? "reopen-tab" : "new-tab";
         }
         if ((key === "W" || key === "w") && !event.shiftKey) return "close-tab";
+        if (key === "Tab" && event.shiftKey) return "prev-tab";
         if (key === "Tab" && !event.shiftKey) return "next-tab";
         return null;
     }

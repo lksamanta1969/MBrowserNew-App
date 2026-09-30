@@ -17,6 +17,7 @@ test("guest editable INPUT forwards new-tab and reopen-tab only", () => {
   assert.equal(shouldForwardGuestTabShortcut("reopen-tab", true), true);
   assert.equal(shouldForwardGuestTabShortcut("close-tab", true), false);
   assert.equal(shouldForwardGuestTabShortcut("next-tab", true), false);
+  assert.equal(shouldForwardGuestTabShortcut("prev-tab", true), false);
 });
 
 test("guest editable TEXTAREA and contentEditable match INPUT policy for Ctrl+T", () => {

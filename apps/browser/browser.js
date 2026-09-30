@@ -48,6 +48,9 @@ function executeBrowserTabShortcutAction(action) {
         case "next-tab":
             BrowserTab.activateRelative(1);
             return true;
+        case "prev-tab":
+            BrowserTab.activateRelative(-1);
+            return true;
         case "reopen-tab":
             reopenClosedTab();
             return true;

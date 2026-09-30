@@ -239,6 +239,7 @@ contextBridge.exposeInMainWorld(
     const key = event.key;
     if (key === "T" || key === "t") return event.shiftKey ? "reopen-tab" : "new-tab";
     if ((key === "W" || key === "w") && !event.shiftKey) return "close-tab";
+    if (key === "Tab" && event.shiftKey) return "prev-tab";
     if (key === "Tab" && !event.shiftKey) return "next-tab";
     return null;
   }

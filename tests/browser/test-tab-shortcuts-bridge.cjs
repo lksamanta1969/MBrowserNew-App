@@ -24,13 +24,39 @@ function keyEvent(overrides) {
   };
 }
 
-test("resolveKeyboardShortcutAction maps Ctrl+T/W/Tab/Shift+T", () => {
+test("resolveKeyboardShortcutAction maps Ctrl+T/W/Tab/Shift+Tab/Shift+T", () => {
   const S = loadShellTabShortcuts();
   assert.equal(S.resolveKeyboardShortcutAction(keyEvent({ key: "t" })), "new-tab");
   assert.equal(S.resolveKeyboardShortcutAction(keyEvent({ key: "T", shiftKey: true })), "reopen-tab");
   assert.equal(S.resolveKeyboardShortcutAction(keyEvent({ key: "w" })), "close-tab");
   assert.equal(S.resolveKeyboardShortcutAction(keyEvent({ key: "Tab" })), "next-tab");
+  assert.equal(S.resolveKeyboardShortcutAction(keyEvent({ key: "Tab", shiftKey: true })), "prev-tab");
   assert.equal(S.resolveKeyboardShortcutAction(keyEvent({ key: "t", ctrlKey: false })), null);
+});
+
+test("prev-tab and next-tab dispatch activateRelative with correct delta", () => {
+  const root = process.env.MBROWSER_TEST_SOURCE || path.join(__dirname, "../../apps/browser");
+  const relativeCalls = [];
+  const BrowserTab = {
+    activateRelative(delta) {
+      relativeCalls.push(delta);
+    },
+    init() {},
+    back() {},
+    forward() {},
+    reload() {},
+    create() {},
+    close() {},
+    reopenClosed() {},
+    active: null
+  };
+  const document = { getElementById: () => null, addEventListener() {} };
+  const window = { onHomePage: true, BrowserTab, document };
+  const ctx = vm.createContext({ window, document, BrowserTab, console, setTimeout, clearTimeout });
+  vm.runInContext(fs.readFileSync(path.join(root, "browser.js"), "utf8"), ctx);
+  ctx.executeBrowserTabShortcutAction("prev-tab");
+  ctx.executeBrowserTabShortcutAction("next-tab");
+  assert.deepEqual(relativeCalls, [-1, 1]);
 });
 
 test("URL and home search inputs allow shell tab shortcuts", () => {
