@@ -12,6 +12,10 @@ function openApp(appName) {
 function loadSite() {
     let url = document.getElementById("url").value.trim();
     if (!url) return;
+    if (url === "mbrowser://home") {
+        BrowserTab.showHome();
+        return;
+    }
     if (!url.startsWith("http://") && !url.startsWith("https://") && url !== "about:blank") {
         if (url.includes(".")) url = "https://" + url;
         else url = window.Settings ? Settings.buildSearchUrl(url) : "https://www.google.com/search?q=" + encodeURIComponent(url);
