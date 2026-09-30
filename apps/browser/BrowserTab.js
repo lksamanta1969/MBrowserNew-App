@@ -56,7 +56,7 @@ class BrowserTabs {
 
     create(view = null, applySettings = true) {
         if (!view) view = document.createElement("webview");
-        const tab = { id: this.nextId++, view, home: true, title: "New Tab", url: "", address: "", homeSearch: "" };
+        const tab = { id: this.nextId++, view, home: true, title: "New Tab", url: "", address: "", homeSearch: "", loading: false };
         const item = document.createElement("div");
         item.className = "tab";
         const select = document.createElement("button");
@@ -119,6 +119,19 @@ class BrowserTabs {
         this.applyNavButton(reloadBtn, onPage);
     }
 
+    syncLoadChrome() {
+        const reloadBtn = document.getElementById("navReloadBtn");
+        if (!reloadBtn) return;
+        const tab = this.active;
+        const loading = !!(tab && !tab.home && tab.loading);
+        if (reloadBtn.classList && typeof reloadBtn.classList.toggle === "function") {
+            reloadBtn.classList.toggle("loading", loading);
+        }
+        if (typeof reloadBtn.setAttribute === "function") {
+            reloadBtn.setAttribute("aria-busy", String(loading));
+        }
+    }
+
     activate(tab) {
         if (!this.tabs.includes(tab) || this.active === tab) return;
         const previous = this.active;
@@ -143,6 +156,7 @@ class BrowserTabs {
         window.Bookmarks?.onPageChanged();
         this.applyZoom(tab);
         this.syncNavChrome();
+        this.syncLoadChrome();
     }
 
     activateRelative(delta) {
@@ -167,6 +181,7 @@ class BrowserTabs {
         window.Autofill?.deactivate();
         window.LoginDetection?.deactivate();
         tab.home = true;
+        tab.loading = false;
         tab.address = "";
         window.onHomePage = true;
         tab.view.style.display = "none";
@@ -174,6 +189,7 @@ class BrowserTabs {
         document.getElementById("url").value = "";
         window.Bookmarks?.onPageChanged();
         this.paint(tab);
+        this.syncLoadChrome();
     }
 
     navigate(url) {
@@ -266,6 +282,20 @@ class BrowserTabs {
             window.History?.recordVisit(tab.url, tab.title);
             this.paint(tab);
         };
+        const loadFrameOk = (event) => event.isMainFrame !== false;
+        const onLoadStart = (event) => {
+            if (!loadFrameOk(event) || !this.tabs.includes(tab)) return;
+            tab.loading = true;
+            if (tab === this.active) this.syncLoadChrome();
+        };
+        const onLoadStop = (event) => {
+            if (!loadFrameOk(event) || !this.tabs.includes(tab)) return;
+            tab.loading = false;
+            if (tab === this.active) this.syncLoadChrome();
+        };
+        tab.view.addEventListener("did-start-loading", onLoadStart);
+        tab.view.addEventListener("did-stop-loading", onLoadStop);
+        tab.view.addEventListener("did-fail-load", onLoadStop);
         tab.view.addEventListener("did-navigate", update);
         tab.view.addEventListener("did-navigate-in-page", update);
         tab.view.addEventListener("page-title-updated", event => {
