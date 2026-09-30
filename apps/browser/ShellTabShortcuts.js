@@ -43,6 +43,18 @@
         return !isManagerOpen(lookup);
     }
 
+    function isReloadKeyboardShortcut(event) {
+        if (!event) return false;
+        if (event.key === "F5") return true;
+        if (!event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return false;
+        const key = event.key;
+        return key === "r" || key === "R";
+    }
+
+    function shellReloadShortcutAllowed(event, getElementById) {
+        return shellTabShortcutAllowed(event, getElementById);
+    }
+
     function resolveKeyboardShortcutAction(event) {
         if (!event.ctrlKey || event.altKey || event.metaKey) return null;
         const key = event.key;
@@ -71,6 +83,8 @@
         shellTabShortcutAllowed,
         shellTabShortcutAllowedForGuestForward,
         resolveKeyboardShortcutAction,
+        isReloadKeyboardShortcut,
+        shellReloadShortcutAllowed,
         isValidAction,
         shouldAcceptGuestShortcut
     };

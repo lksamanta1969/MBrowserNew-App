@@ -72,6 +72,12 @@ window.applyBrowserTabShortcut = applyBrowserTabShortcut;
 document.addEventListener("keydown", (event) => {
     const shortcuts = window.ShellTabShortcuts;
     if (!shortcuts) return;
+    if (shortcuts.isReloadKeyboardShortcut(event)) {
+        if (!shortcuts.shellReloadShortcutAllowed(event)) return;
+        event.preventDefault();
+        refreshPage();
+        return;
+    }
     const action = shortcuts.resolveKeyboardShortcutAction(event);
     if (!action) return;
     if (!shortcuts.shellTabShortcutAllowed(event)) return;
