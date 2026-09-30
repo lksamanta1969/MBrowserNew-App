@@ -6,6 +6,12 @@ body{ margin:0; font-family:Arial; background:#f1f1f1; overflow:hidden; }
 .addtab{ margin-left:5px; border:none; background:transparent; font-size:24px; color:white; cursor:pointer;}
 .topbar{ background:#92400e; padding:10px; display:flex; align-items:center; gap:8px; border-radius:10px; }
 .topbar button{ height:40px; border:none; border-radius:20px; padding:0 15px; cursor:pointer; font-weight:bold;}
+#navBackBtn:disabled,
+#navForwardBtn:disabled,
+#navReloadBtn:disabled{
+    opacity: 0.45;
+    cursor: default;
+}
 #url{ flex:1; height:40px; border:none; border-radius:25px; padding:0 20px; font-size:16px; outline:none;}
 .home{ text-align:center; padding-top:100px; background:#ffffff; min-height:100vh; }
 .home h1{ font-size:80px; color:#b85a17; font-weight:700; margin-top:0; margin-bottom:10px; }

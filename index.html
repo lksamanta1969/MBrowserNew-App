@@ -24,9 +24,9 @@
       <button class="addtab" aria-label="New tab" onclick="newTab()">+</button>
     </div>
     <div class="topbar">
-      <button onclick="goBack()">←</button>
-      <button onclick="goForward()">→</button>
-      <button onclick="refreshPage()">⟳</button>
+      <button id="navBackBtn" onclick="goBack()" title="Back" aria-label="Back">←</button>
+      <button id="navForwardBtn" onclick="goForward()" title="Forward" aria-label="Forward">→</button>
+      <button id="navReloadBtn" onclick="refreshPage()" title="Reload" aria-label="Reload">⟳</button>
       
       <input id="url" placeholder="Search MBrowser or Enter URL" onkeypress="if(event.key==='Enter'){loadSite()}">
       

@@ -43,6 +43,7 @@ class BrowserTabs {
             if (url) this.navigate(url);
             else this.paint(tab);
         }
+        this.syncNavChrome();
         return true;
     }
 
@@ -86,6 +87,36 @@ class BrowserTabs {
         tab.select.setAttribute("aria-selected", String(tab === this.active));
         tab.close.setAttribute("aria-label", "Close " + title);
         tab.item.classList.toggle("active", tab === this.active);
+        if (tab === this.active) this.syncNavChrome();
+    }
+
+    applyNavButton(button, enabled) {
+        if (!button) return;
+        button.disabled = !enabled;
+        if (typeof button.setAttribute === "function") button.setAttribute("aria-disabled", String(!enabled));
+    }
+
+    canActiveGoForward() {
+        const tab = this.active;
+        if (!tab) return false;
+        if (tab.home) return !!tab.url;
+        try {
+            return !!(tab.view && typeof tab.view.canGoForward === "function" && tab.view.canGoForward());
+        } catch (_) {
+            return false;
+        }
+    }
+
+    syncNavChrome() {
+        const backBtn = document.getElementById("navBackBtn");
+        const forwardBtn = document.getElementById("navForwardBtn");
+        const reloadBtn = document.getElementById("navReloadBtn");
+        if (!backBtn && !forwardBtn && !reloadBtn) return;
+        const tab = this.active;
+        const onPage = !!(tab && !tab.home);
+        this.applyNavButton(backBtn, onPage);
+        this.applyNavButton(forwardBtn, this.canActiveGoForward());
+        this.applyNavButton(reloadBtn, onPage);
     }
 
     activate(tab) {
@@ -111,6 +142,7 @@ class BrowserTabs {
         window.LoginDetection?.activate(tab.view);
         window.Bookmarks?.onPageChanged();
         this.applyZoom(tab);
+        this.syncNavChrome();
     }
 
     activateRelative(delta) {
@@ -166,16 +198,23 @@ class BrowserTabs {
 
     back() {
         const tab = this.active;
-        if (!tab || tab.home) return;
+        if (!tab || tab.home) {
+            this.syncNavChrome();
+            return;
+        }
         try {
             if (tab.view.canGoBack()) tab.view.goBack();
             else this.showHome();
         } catch (_) { /* Guest not ready. */ }
+        this.syncNavChrome();
     }
 
     forward() {
         const tab = this.active;
-        if (!tab) return;
+        if (!tab) {
+            this.syncNavChrome();
+            return;
+        }
         if (tab.home && tab.url) {
             tab.home = false;
             window.onHomePage = false;
@@ -187,13 +226,16 @@ class BrowserTabs {
             window.LoginDetection?.activate(tab.view);
             window.Bookmarks?.onPageChanged();
             this.paint(tab);
+            this.syncNavChrome();
             return;
         }
         try { if (tab.view.canGoForward()) tab.view.goForward(); } catch (_) { /* Guest not ready. */ }
+        this.syncNavChrome();
     }
 
     reload() {
         try { if (this.active && !this.active.home) this.active.view.reload(); } catch (_) { /* Guest not ready. */ }
+        this.syncNavChrome();
     }
 
     close(tab) {
