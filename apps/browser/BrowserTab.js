@@ -266,7 +266,18 @@ class BrowserTabs {
     }
 
     reload() {
-        try { if (this.active && !this.active.home) this.active.view.reload(); } catch (_) { /* Guest not ready. */ }
+        const tab = this.active;
+        if (!tab || tab.home) {
+            this.syncNavChrome();
+            return;
+        }
+        try {
+            if (tab.loading) {
+                if (tab.view && typeof tab.view.stop === "function") tab.view.stop();
+            } else if (tab.view && typeof tab.view.reload === "function") {
+                tab.view.reload();
+            }
+        } catch (_) { /* Guest not ready. */ }
         this.syncNavChrome();
     }
 
