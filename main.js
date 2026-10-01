@@ -6,6 +6,7 @@ const os = require("os");
 const { createVaultSession } = require("./vault/VaultSession");
 const { isMigrationComplete, deepClone, migrateVault } = require("./vault/VaultMigration");
 const { createVaultAccess } = require("./vault/VaultAccess");
+const { normalizeHistoryUrl, isRecordableHistoryUrl } = require("./apps/browser/history-url.cjs");
 
 let shellWebContents = null;
 
@@ -967,18 +968,6 @@ function getHistoryRangeBounds(range) {
         default:
             return { from: 0, to: now };
     }
-}
-
-function normalizeHistoryUrl(url) {
-    return String(url || "").trim();
-}
-
-function isRecordableHistoryUrl(url) {
-    if (!url) return false;
-    if (url === "about:blank") return false;
-    if (url.startsWith("chrome://") || url.startsWith("chrome-error://")) return false;
-    if (url.startsWith("data:")) return false;
-    return url.startsWith("http://") || url.startsWith("https://");
 }
 
 ipcMain.handle("history:get", async () => {
