@@ -1498,8 +1498,12 @@ async function deleteDraft(index){
     await trashMessage(draft.id);
 }
 
+let trashLoadId = 0;
+
 async function loadTrash(){
     currentMailboxView = "trash";
+    const requestId = ++trashLoadId;
+    const isCurrentRequest = () => currentMailboxView === "trash" && requestId === trashLoadId;
     setActiveNav("navTrash");
     clearSelection();
     const content = document.getElementById("content");
@@ -1524,6 +1528,7 @@ async function loadTrash(){
 
     try {
         const response = await fetch("http://localhost:3000/mmail/trash");
+        if (!isCurrentRequest()) return;
         if (!response.ok) {
             console.error("[MMail] Trash load failed, status:", response.status);
             const error = document.createElement("h3");
@@ -1532,6 +1537,7 @@ async function loadTrash(){
             return;
         }
         const payload = await response.json();
+        if (!isCurrentRequest()) return;
         const items = (payload && payload.items) || [];
 
         if (!items.length) {
@@ -1599,6 +1605,7 @@ async function loadTrash(){
             content.appendChild(card);
         });
     } catch (e) {
+        if (!isCurrentRequest()) return;
         const error = document.createElement("h3");
         error.textContent = "❌ Could not load Trash.";
         content.appendChild(error);
