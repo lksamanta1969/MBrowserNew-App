@@ -4,11 +4,15 @@ function setup(){
  const html=fs.readFileSync(path.join(__dirname,'../../apps/mmail/index.html'),'utf8');
  const start=html.indexOf('let sharedMailboxLoadId = 0;');const end=html.indexOf('async function loadInbox(){',start);
  const requests=[],notices=[],renders=[];let counts=0;
- const ctx=vm.createContext({currentMailboxView:'level:test',clearSelection(){},document:{getElementById:()=>({})},
+ const content={innerHTML:''};
+ const ctx=vm.createContext({currentMailboxView:'level:test',clearSelection(){},document:{getElementById:()=>content},
   fetch:url=>new Promise((resolve,reject)=>requests.push({url,resolve,reject})),
   renderMailboxLoadStatus:(title,message)=>notices.push({title,message}),renderSelectableMailList:x=>renders.push(x),refreshSidebarCounts:async()=>{counts++;}});
  vm.runInContext(html.slice(start,end),ctx);
- return {ctx,requests,notices,renders,counts:()=>counts};
+ const composeStart=html.indexOf('function openCompose(){');
+ const composeEnd=html.indexOf('async function sendMail()',composeStart);
+ vm.runInContext(html.slice(composeStart,composeEnd),ctx);
+ return {ctx,requests,notices,renders,content,counts:()=>counts};
 }
 const options={sync:false,url:'http://localhost:3000/inbox?levelId=test',title:'Test Level',emptyText:'No messages in this level.'};
 test('shared non-sync loader shows correct title and loading feedback',async()=>{
@@ -57,4 +61,17 @@ test('same-view request replaced during JSON parsing is ignored',async()=>{
  await new Promise(r=>setImmediate(r));const latest=h.ctx.loadInboxMessages(options);
  h.requests[1].resolve({ok:true,json:async()=>[{id:'latest'}]});await latest;resolveJson([{id:'old'}]);await first;
  assert.equal(h.renders.length,1);assert.equal(h.counts(),1);
+});
+
+
+test('Compose prevents pending mailbox response from replacing its form',async()=>{
+ const h=setup();const pending=h.ctx.loadInboxMessages(options);h.ctx.openCompose();
+ assert.equal(h.ctx.currentMailboxView,'compose');const form=h.content.innerHTML;
+ h.requests[0].resolve({ok:true,json:async()=>[{id:'mail'}]});await pending;
+ assert.equal(h.renders.length,0);assert.equal(h.content.innerHTML,form);assert.match(form,/Compose New Mail/);
+});
+test('old mailbox failure cannot show an error over Compose',async()=>{
+ const h=setup();const pending=h.ctx.loadInboxMessages(options);h.ctx.openCompose();
+ h.requests[0].reject(Error('offline'));await pending;
+ assert.equal(h.notices.length,1);assert.match(h.content.innerHTML,/Compose New Mail/);
 });

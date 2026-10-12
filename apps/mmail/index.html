@@ -1326,6 +1326,8 @@ async function loadSmartView(view){
 }
 
 function openCompose(){
+    currentMailboxView = "compose";
+    clearSelection();
     document.getElementById("content").innerHTML = `
     <h1>✉ Compose New Mail</h1><hr><br>
     <input id="to" placeholder="To" style="width:100%;padding:12px; margin-bottom:10px; border:1px solid #ccc; border-radius:8px;">
