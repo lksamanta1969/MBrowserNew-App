@@ -1,6 +1,7 @@
 ﻿const { app, BrowserWindow, ipcMain, shell, dialog, session, Notification, clipboard } = require("electron");
 const { execSync } = require("child_process");
 const { createBackendProcess } = require("./server/BackendProcess");
+const { resolveMDriveRoot } = require("./server/MDriveDataPath");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -128,8 +129,8 @@ ipcMain.handle("save-file", async (event, sourcePath, folderName) => {
         const fileName = path.basename(sourcePath);
 
         const targetDir = folderName
-            ? path.join(__dirname, "mdrive", ...folderName.split(/[/\\]/))
-            : path.join(__dirname, "mdrive");
+            ? path.join(mdriveRoot(), ...folderName.split(/[/\\]/))
+            : mdriveRoot();
 
         const destPath = path.join(targetDir, fileName);
 
@@ -157,8 +158,8 @@ console.log("COPY SUCCESS");
 ipcMain.handle("mdrive:create-folder", async (event, folderName, parentPath) => {
     try {
         const folderPath = parentPath
-            ? path.join(__dirname, "mdrive", ...parentPath.split(/[/\\]/), folderName)
-            : path.join(__dirname, "mdrive", folderName);
+            ? path.join(mdriveRoot(), ...parentPath.split(/[/\\]/), folderName)
+            : path.join(mdriveRoot(), folderName);
 
         if (fs.existsSync(folderPath)) {
             return {
@@ -184,9 +185,16 @@ ipcMain.handle("mdrive:create-folder", async (event, folderName, parentPath) => 
     }
 });
 
+function mdriveRoot() {
+    return resolveMDriveRoot(__dirname, {
+        isPackaged: app.isPackaged,
+        userDataPath: app.isPackaged ? app.getPath("userData") : undefined
+    });
+}
+
 function mdriveDir(relativePath) {
-    if (!relativePath) return path.join(__dirname, "mdrive");
-    return path.join(__dirname, "mdrive", ...relativePath.split(/[/\\]/));
+    if (!relativePath) return mdriveRoot();
+    return path.join(mdriveRoot(), ...relativePath.split(/[/\\]/));
 }
 
 ipcMain.handle("mdrive:list", async (event, relativePath) => {
