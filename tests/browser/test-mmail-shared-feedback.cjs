@@ -2,7 +2,7 @@ const {test}=require('node:test');const assert=require('node:assert/strict');
 const fs=require('node:fs');const path=require('node:path');const vm=require('node:vm');
 function setup(){
  const html=fs.readFileSync(path.join(__dirname,'../../apps/mmail/index.html'),'utf8');
- const start=html.indexOf('async function loadInboxMessages(options) {');const end=html.indexOf('async function loadInbox(){',start);
+ const start=html.indexOf('let sharedMailboxLoadId = 0;');const end=html.indexOf('async function loadInbox(){',start);
  const requests=[],notices=[],renders=[];let counts=0;
  const ctx=vm.createContext({currentMailboxView:'level:test',clearSelection(){},document:{getElementById:()=>({})},
   fetch:url=>new Promise((resolve,reject)=>requests.push({url,resolve,reject})),
@@ -34,4 +34,27 @@ test('valid mail response preserves renderer options and sidebar refresh',async(
  const h=setup();const p=h.ctx.loadInboxMessages({...options,showCategoryBulk:false});
  h.requests[0].resolve({ok:true,json:async()=>[{id:'sample'}]});await p;
  assert.equal(h.renders[0].items[0].id,'sample');assert.equal(h.renders[0].showCategoryBulk,false);assert.equal(h.counts(),1);
+});
+
+
+test('revisiting same shared mailbox drops previous pending response',async()=>{
+ const h=setup();const first=h.ctx.loadInboxMessages(options);
+ h.ctx.currentMailboxView='smart:archived';const middle=h.ctx.loadInboxMessages({...options,title:'Archive'});
+ h.ctx.currentMailboxView='level:test';const latest=h.ctx.loadInboxMessages(options);
+ h.requests[2].resolve({ok:true,json:async()=>[{id:'latest'}]});await latest;
+ h.requests[0].resolve({ok:true,json:async()=>[{id:'old'}]});h.requests[1].resolve({ok:true,json:async()=>[]});
+ await Promise.all([first,middle]);assert.equal(h.renders.length,1);assert.equal(h.renders[0].items[0].id,'latest');
+});
+test('old same-view failure does not replace latest loading notice',async()=>{
+ const h=setup();const first=h.ctx.loadInboxMessages(options);const latest=h.ctx.loadInboxMessages(options);
+ h.requests[0].reject(Error('old failure'));await first;
+ assert.equal(h.notices.at(-1).message,'Loading messages...');
+ h.requests[1].resolve({ok:true,json:async()=>[]});await latest;assert.equal(h.renders.length,1);
+});
+test('same-view request replaced during JSON parsing is ignored',async()=>{
+ const h=setup();let resolveJson;const first=h.ctx.loadInboxMessages(options);
+ h.requests[0].resolve({ok:true,json:()=>new Promise(r=>{resolveJson=r;})});
+ await new Promise(r=>setImmediate(r));const latest=h.ctx.loadInboxMessages(options);
+ h.requests[1].resolve({ok:true,json:async()=>[{id:'latest'}]});await latest;resolveJson([{id:'old'}]);await first;
+ assert.equal(h.renders.length,1);assert.equal(h.counts(),1);
 });
