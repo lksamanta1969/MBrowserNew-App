@@ -7,6 +7,8 @@ const History = (function () {
   let store = { entries: [] };
   let searchQuery = "";
   let activeFilter = "all";
+  let loading = false;
+  let loadError = false;
   let selectedIds = new Set();
 
   function ensureApi() {
@@ -20,11 +22,17 @@ const History = (function () {
 
   async function refreshStore() {
     const bridge = ensureApi();
-    if (!bridge) return store;
-
-    const result = await bridge.historyGet();
-    if (result && result.success && result.data) {
-      store = result.data;
+    loadError = false;
+    if (!bridge) {
+      loadError = true;
+      return store;
+    }
+    try {
+      const result = await bridge.historyGet();
+      if (result && result.success && result.data) store = result.data;
+      else loadError = true;
+    } catch (_) {
+      loadError = true;
     }
     return store;
   }
@@ -137,6 +145,24 @@ const History = (function () {
     const list = document.getElementById("histList");
     const selectAll = document.getElementById("histSelectAll");
     if (!list) return;
+
+    if (selectAll) selectAll.disabled = loading || loadError;
+    if (loading || loadError) {
+      if (heading) heading.textContent = "History";
+      list.innerHTML = "";
+      const notice = document.createElement("div");
+      notice.className = "hist-list-empty";
+      notice.setAttribute("role", "status");
+      notice.textContent = loading
+        ? "Loading history..."
+        : "Could not load history. Close and reopen History to try again.";
+      list.appendChild(notice);
+      if (selectAll) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+      }
+      return;
+    }
 
     const entries = getFilteredEntries();
     if (heading) {
@@ -309,6 +335,7 @@ const History = (function () {
   }
 
   function toggleSelectAll(checked) {
+    if (loading || loadError) return;
     const entries = getFilteredEntries();
     if (checked) {
       entries.forEach((entry) => selectedIds.add(entry.id));
@@ -321,8 +348,12 @@ const History = (function () {
   async function openManager() {
     const manager = document.getElementById("historyManager");
     if (!manager) return;
-    await refreshStore();
+    selectedIds.clear();
     manager.classList.add("open");
+    loading = true;
+    renderManager();
+    await refreshStore();
+    loading = false;
     renderManager();
     const searchInput = document.getElementById("histSearchInput");
     if (searchInput) searchInput.focus();

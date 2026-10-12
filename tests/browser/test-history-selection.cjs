@@ -17,6 +17,7 @@ async function setup() {
       set innerHTML(value) { this.children = []; this.html = value; },
       get innerHTML() { return this.html; },
       appendChild(child) { this.children.push(child); },
+      setAttribute() {},
       addEventListener(name, fn) { this.events[name] = fn; },
       focus() {}
     };
