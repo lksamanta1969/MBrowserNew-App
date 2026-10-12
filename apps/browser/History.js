@@ -304,6 +304,7 @@ const History = (function () {
 
   function onSearchInput(value) {
     searchQuery = value || "";
+    selectedIds.clear();
     renderManager();
   }
 
