@@ -1,6 +1,6 @@
 {
   "name": "mbrowser",
-  "version": "1.0.0",
+  "version": "1.0.0-beta.1",
   "description": "MBrowser - Electron Browser with MMail, MDrive, MNotes, MPay and MTube",
   "author": "Lakshmi Kanta Samanta",
   "license": "MIT",
@@ -10,7 +10,9 @@
     "test:vault": "node vault/test-vault-crypto.js",
     "test:vault-session": "node vault/test-vault-session.js",
     "test:vault-migration": "node vault/test-vault-migration.js",
-    "test:vault-access": "node vault/test-vault-access.js"
+    "test:vault-access": "node vault/test-vault-access.js",
+    "build:win": "electron-builder --win nsis --x64 --publish never",
+    "build:dir": "electron-builder --win --x64 --dir --publish never"
   },
   "dependencies": {
     "cors": "^2.8.6",
@@ -22,6 +24,7 @@
     "nodemailer": "8.0.10"
   },
   "devDependencies": {
-    "electron": "^30.0.0"
+    "electron": "^30.0.0",
+    "electron-builder": "26.15.3"
   }
 }

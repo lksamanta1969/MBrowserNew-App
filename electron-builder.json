@@ -1,0 +1,45 @@
+{
+  "appId": "com.lksamanta.mbrowser",
+  "productName": "MBrowser Beta",
+  "asar": false,
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "main.js",
+    "server.js",
+    "preload.js",
+    "index.html",
+    "mbrowser-logo.ico",
+    "package.json",
+    "apps/**/*",
+    "server/**/*.js",
+    "vault/**/*.js",
+    "!server/**/test-*.js",
+    "!vault/test-*.js",
+    "!apps/**/test-*",
+    "!**/.env*",
+    "!**/*.bak*"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "icon": "build-assets/mbrowser.ico",
+    "signExecutable": false
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "deleteAppDataOnUninstall": false
+  },
+  "artifactName": "MBrowser-Beta-${version}-${arch}-Setup.${ext}"
+}
