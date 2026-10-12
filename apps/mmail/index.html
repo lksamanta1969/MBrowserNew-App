@@ -1522,23 +1522,27 @@ async function loadTrash(){
     const emptyBtn = document.createElement("button");
     emptyBtn.className = "danger";
     emptyBtn.textContent = "Empty Trash";
+    emptyBtn.disabled = true;
     emptyBtn.addEventListener("click", emptyTrash);
     toolbar.appendChild(emptyBtn);
     content.appendChild(toolbar);
+    const status = document.createElement("p");
+    status.setAttribute("role", "status");
+    status.textContent = "Loading Trash...";
+    content.appendChild(status);
 
     try {
         const response = await fetch("http://localhost:3000/mmail/trash");
         if (!isCurrentRequest()) return;
         if (!response.ok) {
-            console.error("[MMail] Trash load failed, status:", response.status);
-            const error = document.createElement("h3");
-            error.textContent = "❌ Could not load Trash (server route unavailable). Restart MBrowser.";
-            content.appendChild(error);
-            return;
+            throw new Error("Could not read Trash.");
         }
         const payload = await response.json();
         if (!isCurrentRequest()) return;
-        const items = (payload && payload.items) || [];
+        if (!payload || !Array.isArray(payload.items)) throw new Error("Invalid Trash response.");
+        const items = payload.items;
+        status.remove();
+        emptyBtn.disabled = items.length === 0;
 
         if (!items.length) {
             const empty = document.createElement("p");
@@ -1606,9 +1610,7 @@ async function loadTrash(){
         });
     } catch (e) {
         if (!isCurrentRequest()) return;
-        const error = document.createElement("h3");
-        error.textContent = "❌ Could not load Trash.";
-        content.appendChild(error);
+        status.textContent = "Could not load Trash. Select Trash again to try again.";
     }
 }
 
