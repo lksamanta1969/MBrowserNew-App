@@ -63,8 +63,19 @@ const Settings = (function () {
 
   async function savePatch(patch) {
     const bridge = ensureApi();
-    if (!bridge) return null;
-    const result = await bridge.settingsSet(patch);
+    if (!bridge) {
+      alert("Could not save settings.");
+      if (isOpen()) renderActiveSection();
+      return null;
+    }
+    let result;
+    try {
+      result = await bridge.settingsSet(patch);
+    } catch (_) {
+      alert("Could not save settings. Please try again.");
+      if (isOpen()) renderActiveSection();
+      return null;
+    }
     if (result && result.success && result.data) {
       store = result.data;
       applyRuntimeEffects(patch);
@@ -72,6 +83,7 @@ const Settings = (function () {
       return store;
     }
     alert((result && result.error) || "Could not save settings.");
+    if (isOpen()) renderActiveSection();
     return null;
   }
 
