@@ -77,7 +77,9 @@ function createWindow() {
 
 app.whenReady().then(() => {
 
-  const serverProcess = backendProcess.start();
+  const serverProcess = backendProcess.start({
+      MBROWSER_DATA_DIR: app.isPackaged ? path.join(app.getPath("userData"), "backend") : __dirname
+  });
 
   serverProcess.stdout.on("data", (data) => {
     console.log("[SERVER]", data.toString());

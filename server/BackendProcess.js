@@ -3,11 +3,11 @@ const { spawn } = require("child_process");
 function createBackendProcess({ executable, script, cwd, env = process.env, spawnProcess = spawn, onError = () => {} }) {
     let child = null;
     return {
-        start() {
+        start(envOverrides = {}) {
             if (child) return child;
             const current = spawnProcess(executable, [script], {
                 cwd,
-                env: { ...env, ELECTRON_RUN_AS_NODE: "1" },
+                env: { ...env, ...envOverrides, ELECTRON_RUN_AS_NODE: "1" },
                 shell: false,
                 windowsHide: true
             });

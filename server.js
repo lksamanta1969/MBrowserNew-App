@@ -2,7 +2,8 @@ process.on("uncaughtException", err => {
     console.error("UNCAUGHT ERROR:", err);
 });
 
-require("dotenv").config();
+const backendData = require("./server/BackendDataPaths").getBackendDataPaths(__dirname);
+require("dotenv").config({ path: backendData.envFile });
 const express = require("express");
 const nodemailer = require("nodemailer");
 const Imap = require("imap");
@@ -15,8 +16,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const dbPath = path.join(__dirname, "maildb.json");
-const mpayDbPath = path.join(__dirname, "mpaydb.json");
+const dbPath = backendData.mail;
+const mpayDbPath = backendData.pay;
 
 const { createMailStore } = require("./server/mmail/MailStore");
 const { createMailActions } = require("./server/mmail/MailActions");
@@ -32,11 +33,11 @@ const {
 const mailStore = createMailStore(dbPath);
 const mailActions = createMailActions(mailStore);
 
-const mnotesDbPath = path.join(__dirname, "mnotes.json");
+const mnotesDbPath = backendData.notes;
 const { createMNotesStore } = require("./server/mnotes/MNotesStore");
 const mnotesStore = createMNotesStore(mnotesDbPath);
 
-const mtubeDbPath = path.join(__dirname, "mtubedb.json");
+const mtubeDbPath = backendData.tube;
 const { createMTubeStore } = require("./server/mtube/MTubeStore");
 const mtubeStore = createMTubeStore(mtubeDbPath);
 

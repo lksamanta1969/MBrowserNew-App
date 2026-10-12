@@ -20,3 +20,9 @@ test('spawn errors are handled and do not retain failed child',()=>{
 test('old exit event cannot clear a newly started child',()=>{
  const h=setup();const old=h.backend.start();h.backend.stop();const current=h.backend.start();old.emit('exit',0);h.backend.stop();assert.equal(current.kills,1);
 });
+
+
+test('backend start passes explicit data folder without changing Node mode',()=>{
+ const h=setup();h.backend.start({MBROWSER_DATA_DIR:'user-data',ELECTRON_RUN_AS_NODE:'0'});
+ assert.equal(h.calls[0][2].env.MBROWSER_DATA_DIR,'user-data');assert.equal(h.calls[0][2].env.ELECTRON_RUN_AS_NODE,'1');
+});
