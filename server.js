@@ -543,7 +543,7 @@ app.get("/mtube/library/:id/stream", (req, res) => {
     }
 });
 
-app.use(express.static(__dirname));
+require("./server/PublicAssets").mountPublicAssets(app, __dirname);
 
 app.listen(3000, () => {
     console.log("SERVER RUNNING ON PORT 3000");
