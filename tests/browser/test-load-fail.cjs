@@ -77,6 +77,7 @@ function setup(options = {}) {
   }
 
   const elements = new Map();
+  elements.set("browserLoadError", { hidden: true, textContent: "" });
   elements.set("tabList", { appendChild() {} });
   elements.set("browser-webview-mount", { before() {} });
   elements.set("url", { value: "", focus() {} });
@@ -313,4 +314,63 @@ test("13 failed page Back to Home then Forward preserves failure until retry", (
   bt.active.view.emitLoad("did-start-loading");
   assert.equal(bt.active.loadFailed, false);
   assert.equal(failChrome(h.elements).failed, false);
+});
+
+
+test("14 load failure notice follows active tab Home Forward and retry", () => {
+  const h = setup();
+  const bt = h.window.BrowserTab;
+  const notice = h.elements.get("browserLoadError");
+  assert.equal(notice.hidden, true);
+  bt.navigate("https://example.com/fail");
+  bt.active.view.emitLoad("did-fail-load", { errorCode: -2 });
+  const tabA = bt.active;
+  assert.equal(notice.hidden, false);
+  assert.equal(notice.textContent, "This page could not be loaded. Use Reload to try again.");
+  bt.create(null, false);
+  assert.equal(notice.hidden, true);
+  assert.equal(notice.textContent, "");
+  bt.activate(tabA);
+  assert.equal(notice.hidden, false);
+  bt.showHome();
+  assert.equal(notice.hidden, true);
+  bt.forward();
+  assert.equal(notice.hidden, false);
+  bt.active.view.emitLoad("did-start-loading");
+  assert.equal(notice.hidden, true);
+  assert.equal(notice.textContent, "");
+});
+
+test("15 abort and subframe failures never show a page failure notice", () => {
+  const h = setup();
+  const bt = h.window.BrowserTab;
+  const notice = h.elements.get("browserLoadError");
+  bt.navigate("https://example.com/abort");
+  bt.active.view.emitLoad("did-start-loading");
+  bt.active.view.emitLoad("did-fail-load", { errorCode: -3 });
+  assert.equal(notice.hidden, true);
+  bt.active.view.emitLoad("did-start-loading");
+  bt.active.view.emitLoad("did-fail-load", { errorCode: -2, isMainFrame: false });
+  assert.equal(notice.hidden, true);
+});
+
+test("16 background page failure cannot show notice over active page", () => {
+  const h = setup();
+  const bt = h.window.BrowserTab;
+  bt.navigate("https://example.com/background");
+  const tabA = bt.active;
+  bt.create(null, false);
+  bt.navigate("https://example.com/active");
+  tabA.view.emitLoad("did-fail-load", { errorCode: -2 });
+  assert.equal(h.elements.get("browserLoadError").hidden, true);
+});
+
+test("17 notice works without Reload button and missing notice is safe", () => {
+  const h = setup({ includeReload: false });
+  const bt = h.window.BrowserTab;
+  bt.navigate("https://example.com/fail");
+  bt.active.view.emitLoad("did-fail-load", { errorCode: -2 });
+  assert.equal(h.elements.get("browserLoadError").hidden, false);
+  h.elements.delete("browserLoadError");
+  assert.doesNotThrow(() => bt.syncFailureChrome());
 });

@@ -139,10 +139,18 @@ class BrowserTabs {
     }
 
     syncFailureChrome() {
-        const reloadBtn = document.getElementById("navReloadBtn");
-        if (!reloadBtn) return;
         const tab = this.active;
         const failed = !!(tab && !tab.home && tab.loadFailed);
+        const errorNotice = document.getElementById("browserLoadError");
+        if (errorNotice) {
+            errorNotice.hidden = !failed;
+            errorNotice.textContent = failed
+                ? "This page could not be loaded. Use Reload to try again."
+                : "";
+        }
+        document.body?.classList?.toggle("has-page-load-error", failed);
+        const reloadBtn = document.getElementById("navReloadBtn");
+        if (!reloadBtn) return;
         if (reloadBtn.classList && typeof reloadBtn.classList.toggle === "function") {
             reloadBtn.classList.toggle("load-failed", failed);
         }

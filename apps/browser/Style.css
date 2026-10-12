@@ -1472,3 +1472,17 @@ body[data-theme="dark"] .af-offer-user-btn.selected{
 .tab-close:hover { background:rgba(0,0,0,.12); border-radius:8px; }
 .tab-select:focus-visible, .tab-close:focus-visible, .addtab:focus-visible { outline:2px solid #2563eb; outline-offset:-2px; }
 .addtab { flex-shrink:0; }
+
+
+.browser-load-error {
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 12px 16px;
+    background: #fff1f2;
+    color: #991b1b;
+    font-size: 14px;
+    line-height: 20px;
+}
+.browser-load-error[hidden] { display: none; }
+body.has-page-load-error webview { height: calc(100vh - 184px); }
+body.has-bookmarks-bar.has-page-load-error webview { height: calc(100vh - 222px); }
