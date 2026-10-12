@@ -26,6 +26,8 @@ const Settings = (function () {
   ];
 
   let store = null;
+  let loading = false;
+  let loadError = false;
   let activeSection = "general";
   let searchQuery = "";
   let aboutInfo = null;
@@ -53,15 +55,26 @@ const Settings = (function () {
 
   async function refreshStore() {
     const bridge = ensureApi();
-    if (!bridge) return store;
-    const result = await bridge.settingsGet();
-    if (result && result.success && result.data) {
-      store = result.data;
+    loadError = false;
+    if (!bridge) {
+      loadError = true;
+      return store;
+    }
+    try {
+      const result = await bridge.settingsGet();
+      if (result && result.success && result.data) store = result.data;
+      else loadError = true;
+    } catch (_) {
+      loadError = true;
     }
     return store;
   }
 
   async function savePatch(patch) {
+    if (loading || loadError) {
+      alert("Settings are not available yet. Close and reopen Settings to try again.");
+      return null;
+    }
     const bridge = ensureApi();
     if (!bridge) {
       alert("Could not save settings.");
@@ -297,6 +310,17 @@ const Settings = (function () {
     const content = document.getElementById("settingsContent");
     const title = document.getElementById("settingsSectionTitle");
     if (!content) return;
+    if (loading || loadError) {
+      if (title) title.textContent = "Settings";
+      content.innerHTML = "";
+      const notice = document.createElement("p");
+      notice.setAttribute("role", "status");
+      notice.textContent = loading
+        ? "Loading settings..."
+        : "Could not load settings. Close and reopen Settings to try again.";
+      content.appendChild(notice);
+      return;
+    }
 
     const section = SECTIONS.find((s) => s.id === activeSection) || SECTIONS[0];
     if (title) title.textContent = section.label;
@@ -770,14 +794,21 @@ const Settings = (function () {
   async function openManager(section) {
     const manager = document.getElementById("settingsManager");
     if (!manager) return;
-    await refreshStore();
     if (section) activeSection = section;
-    const bridge = ensureApi();
-    if (bridge) {
-      const about = await bridge.settingsGetAbout();
-      if (about && about.success) aboutInfo = about.data;
-    }
     manager.classList.add("open");
+    loading = true;
+    renderNav();
+    renderActiveSection();
+    await refreshStore();
+    const bridge = ensureApi();
+    if (!loadError && bridge && typeof bridge.settingsGetAbout === "function") {
+      try {
+        const about = await bridge.settingsGetAbout();
+        if (about && about.success) aboutInfo = about.data;
+      } catch (_) { /* Optional About information must not block Settings. */ }
+    }
+    loading = false;
+    if (!isOpen()) return;
     renderNav();
     renderActiveSection();
     const search = document.getElementById("settingsSearchInput");
