@@ -1384,8 +1384,13 @@ async function loadSent(){
     currentMailboxView = "sent";
     setActiveNav("navSent");
     clearSelection();
+    const requestedView = currentMailboxView;
     try {
-        const mails = await fetch("http://localhost:3000/sent").then(r=>r.json());
+        const response = await fetch("http://localhost:3000/sent");
+        if (currentMailboxView !== requestedView) return;
+        if (!response.ok) throw new Error("Could not load Sent.");
+        const mails = await response.json();
+        if (currentMailboxView !== requestedView) return;
         renderSelectableMailList({
             title: "📤 Sent Box",
             items: mails,
@@ -1398,15 +1403,23 @@ async function loadSent(){
                 { text: m.msg || "", muted: true }
             ]
         });
-    } catch(e) { alert("Server connection error."); }
+    } catch(e) {
+        if (currentMailboxView !== requestedView) return;
+        alert("Could not load Sent. Please try again.");
+    }
 }
 
 async function loadDrafts(){
     currentMailboxView = "drafts";
     setActiveNav("navDrafts");
     clearSelection();
+    const requestedView = currentMailboxView;
     try {
-        const drafts = await fetch("http://localhost:3000/draft").then(r=>r.json());
+        const response = await fetch("http://localhost:3000/draft");
+        if (currentMailboxView !== requestedView) return;
+        if (!response.ok) throw new Error("Could not load Drafts.");
+        const drafts = await response.json();
+        if (currentMailboxView !== requestedView) return;
         renderMailList({
             title: "📝 Drafts",
             items: drafts,
@@ -1419,7 +1432,10 @@ async function loadDrafts(){
                 { text: d.msg || "", muted: true }
             ]
         });
-    } catch(e) { alert("Error loading drafts."); }
+    } catch(e) {
+        if (currentMailboxView !== requestedView) return;
+        alert("Could not load Drafts. Please try again.");
+    }
 }
 async function editDraft(index){
 
