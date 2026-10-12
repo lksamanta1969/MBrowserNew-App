@@ -1228,6 +1228,7 @@ async function loadInboxMessages(options) {
     clearSelection();
     const content = document.getElementById("content");
     const requestedView = currentMailboxView;
+    if (!options.sync) renderMailboxLoadStatus(options.title, "Loading messages...");
     try {
         if (options.sync) {
             if (currentMailboxView !== requestedView) return;
@@ -1259,9 +1260,11 @@ async function loadInboxMessages(options) {
         const response = await fetch(options.url);
         if (currentMailboxView !== requestedView) return;
 
+        if (!response.ok) throw new Error("Could not read mailbox.");
         const mails = await response.json();
         if (currentMailboxView !== requestedView) return;
 
+        if (!Array.isArray(mails)) throw new Error("Invalid mailbox response.");
         renderSelectableMailList({
             title: options.title,
             items: mails,
@@ -1276,7 +1279,7 @@ async function loadInboxMessages(options) {
         await refreshSidebarCounts();
     } catch (e) {
         if (currentMailboxView !== requestedView) return;
-        content.innerHTML = "<h3>❌ Backend Offline on Port 3000</h3>";
+        renderMailboxLoadStatus(options.title, "Could not load messages. Select this mailbox again to try again.");
     }
 }
 
