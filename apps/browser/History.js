@@ -329,6 +329,7 @@ const History = (function () {
   }
 
   function closeManager() {
+    selectedIds.clear();
     const manager = document.getElementById("historyManager");
     if (manager) manager.classList.remove("open");
   }
