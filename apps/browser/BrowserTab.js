@@ -265,6 +265,8 @@ class BrowserTabs {
             window.Bookmarks?.onPageChanged();
             this.paint(tab);
             this.syncNavChrome();
+            this.syncLoadChrome();
+            this.syncFailureChrome();
             return;
         }
         try { if (tab.view.canGoForward()) tab.view.goForward(); } catch (_) { /* Guest not ready. */ }

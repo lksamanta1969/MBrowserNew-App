@@ -281,3 +281,53 @@ test("12 retry after failure switches Reload to Stop and back", () => {
   bt.active.view.emitLoad("did-stop-loading");
   assertAction(loadChrome(h.elements), false);
 });
+
+
+test("13 Forward from Home restores Stop for a still-loading retained page", () => {
+  const h = setup();
+  const bt = h.window.BrowserTab;
+  bt.navigate("https://example.com/retained");
+  bt.showHome();
+  bt.active.view.emitLoad("did-start-loading");
+  assertAction(loadChrome(h.elements), false);
+  bt.forward();
+  assert.equal(bt.active.home, false);
+  assert.equal(bt.active.loading, true);
+  const state = loadChrome(h.elements);
+  assertAction(state, true);
+  assert.equal(state.loading, true);
+  assert.equal(state.ariaBusy, "true");
+  bt.active.view.emitLoad("did-stop-loading");
+  assertAction(loadChrome(h.elements), false);
+});
+
+test("14 Forward from Home restores failed page chrome and Reload", () => {
+  const h = setup();
+  const bt = h.window.BrowserTab;
+  const button = h.elements.get("navReloadBtn");
+  bt.navigate("https://example.com/failed-retained");
+  bt.showHome();
+  bt.active.view.emitLoad("did-fail-load", { errorCode: -2 });
+  assert.equal(bt.active.home, true);
+  bt.forward();
+  assert.equal(bt.active.loadFailed, true);
+  assert.equal(button.classList.contains("load-failed"), true);
+  assert.equal(button.getAttribute("aria-invalid"), "true");
+  assertAction(loadChrome(h.elements), false);
+});
+
+test("15 Forward from Home restores idle page with no stale chrome", () => {
+  const h = setup();
+  const bt = h.window.BrowserTab;
+  const button = h.elements.get("navReloadBtn");
+  bt.navigate("https://example.com/idle-retained");
+  bt.showHome();
+  bt.active.view.emitLoad("did-start-loading");
+  bt.active.view.emitLoad("did-stop-loading");
+  bt.forward();
+  const state = loadChrome(h.elements);
+  assertAction(state, false);
+  assert.equal(state.ariaBusy, "false");
+  assert.equal(button.getAttribute("aria-invalid"), "false");
+  assert.equal(button.classList.contains("load-failed"), false);
+});
