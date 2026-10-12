@@ -5,6 +5,13 @@ const { resolveMDriveRoot } = require("./server/MDriveDataPath");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const { resolveBetaProfile } = require("./server/BetaProfile");
+if (app.isPackaged) {
+    const betaProfile = resolveBetaProfile({ isPackaged: true, appDataPath: app.getPath("appData") });
+    fs.mkdirSync(betaProfile, { recursive: true });
+    app.setPath("userData", betaProfile);
+}
+
 const { createVaultSession } = require("./vault/VaultSession");
 const { isMigrationComplete, deepClone, migrateVault } = require("./vault/VaultMigration");
 const { createVaultAccess } = require("./vault/VaultAccess");
