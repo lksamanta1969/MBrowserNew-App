@@ -830,9 +830,14 @@ async function bulkMoveSelected() {
     await openMovePopup();
 }
 
+let levelMetadataLoadId = 0;
+
 async function loadLevel(levelId) {
     currentMailboxView = "level:" + levelId;
+    const requestedView = currentMailboxView;
+    const requestId = ++levelMetadataLoadId;
     const level = getLevelById(levelId) || (await fetchLevels()).find((item) => item.id === levelId);
+    if (currentMailboxView !== requestedView || requestId !== levelMetadataLoadId) return;
     setActiveNav("navLevel_" + levelId);
     await loadInboxMessages({
         sync: false,
