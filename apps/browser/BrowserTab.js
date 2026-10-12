@@ -124,6 +124,12 @@ class BrowserTabs {
         if (!reloadBtn) return;
         const tab = this.active;
         const loading = !!(tab && !tab.home && tab.loading);
+        const label = loading ? "Stop loading" : "Reload";
+        reloadBtn.textContent = loading ? "\u25A0" : "\u27F3";
+        if (typeof reloadBtn.setAttribute === "function") {
+            reloadBtn.setAttribute("title", label);
+            reloadBtn.setAttribute("aria-label", label);
+        }
         if (reloadBtn.classList && typeof reloadBtn.classList.toggle === "function") {
             reloadBtn.classList.toggle("loading", loading);
         }
