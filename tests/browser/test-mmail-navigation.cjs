@@ -2,7 +2,7 @@ const {test}=require('node:test');const assert=require('node:assert/strict');
 const fs=require('node:fs');const path=require('node:path');const vm=require('node:vm');
 function setup(){
   const html=fs.readFileSync(path.join(__dirname,'../../apps/mmail/index.html'),'utf8');
-  const start=html.indexOf('function renderMailboxLoadStatus(');const end=html.indexOf('async function editDraft(',start);
+  const start=html.indexOf('let sentDraftLoadId = 0;');const end=html.indexOf('async function editDraft(',start);
   assert.ok(start>=0 && end>start);
   const requests=[],renders=[],alerts=[];
   const content={children:[],set innerHTML(v){this.children=[];},appendChild(n){this.children.push(n);}};
@@ -69,4 +69,24 @@ test('late failure cannot replace another mailbox loading notice',async()=>{
   assert.match(h.content.children[0].textContent,/Drafts/);
   assert.equal(h.content.children[2].textContent,'Loading messages...');
   h.requests[1].resolve(response([]));await drafts;
+});
+
+
+test('returning to Sent discards first Sent request even when view name matches',async()=>{
+  const h=setup();const first=h.ctx.loadSent();const middle=h.ctx.loadDrafts();const latest=h.ctx.loadSent();
+  h.requests[2].resolve(response([{id:'latest'}]));await latest;
+  h.requests[0].resolve(response([{id:'old'}]));h.requests[1].resolve(response([]));await Promise.all([first,middle]);
+  assert.equal(h.renders.length,1);assert.equal(h.renders[0].items[0].id,'latest');
+});
+test('returning to Drafts discards first Drafts request',async()=>{
+  const h=setup();const first=h.ctx.loadDrafts();const middle=h.ctx.loadSent();const latest=h.ctx.loadDrafts();
+  h.requests[2].resolve(response([{id:'latest'}]));await latest;
+  h.requests[0].resolve(response([{id:'old'}]));h.requests[1].resolve(response([]));await Promise.all([first,middle]);
+  assert.equal(h.renders.length,1);assert.equal(h.renders[0].items[0].id,'latest');
+});
+test('old same-view error cannot replace latest loading status',async()=>{
+  const h=setup();const first=h.ctx.loadSent();const latest=h.ctx.loadSent();
+  h.requests[0].reject(Error('old error'));await first;
+  assert.equal(h.content.children[2].textContent,'Loading messages...');
+  h.requests[1].resolve(response([]));await latest;assert.equal(h.renders.length,1);
 });

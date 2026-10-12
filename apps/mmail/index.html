@@ -1380,6 +1380,8 @@ async function saveDraft(){
     }
 }
 
+let sentDraftLoadId = 0;
+
 function renderMailboxLoadStatus(title, message) {
     const content = document.getElementById("content");
     if (!content) return;
@@ -1399,13 +1401,14 @@ async function loadSent(){
     setActiveNav("navSent");
     clearSelection();
     const requestedView = currentMailboxView;
+    const requestId = ++sentDraftLoadId;
     renderMailboxLoadStatus(currentMailboxView === "sent" ? "📤 Sent Box" : "📝 Drafts", "Loading messages...");
     try {
         const response = await fetch("http://localhost:3000/sent");
-        if (currentMailboxView !== requestedView) return;
+        if (currentMailboxView !== requestedView || requestId !== sentDraftLoadId) return;
         if (!response.ok) throw new Error("Could not load Sent.");
         const mails = await response.json();
-        if (currentMailboxView !== requestedView) return;
+        if (currentMailboxView !== requestedView || requestId !== sentDraftLoadId) return;
         renderSelectableMailList({
             title: "📤 Sent Box",
             items: mails,
@@ -1419,7 +1422,7 @@ async function loadSent(){
             ]
         });
     } catch(e) {
-        if (currentMailboxView !== requestedView) return;
+        if (currentMailboxView !== requestedView || requestId !== sentDraftLoadId) return;
         renderMailboxLoadStatus("📤 Sent Box", "Could not load Sent. Select Sent again to try again.");
     }
 }
@@ -1429,13 +1432,14 @@ async function loadDrafts(){
     setActiveNav("navDrafts");
     clearSelection();
     const requestedView = currentMailboxView;
+    const requestId = ++sentDraftLoadId;
     renderMailboxLoadStatus(currentMailboxView === "sent" ? "📤 Sent Box" : "📝 Drafts", "Loading messages...");
     try {
         const response = await fetch("http://localhost:3000/draft");
-        if (currentMailboxView !== requestedView) return;
+        if (currentMailboxView !== requestedView || requestId !== sentDraftLoadId) return;
         if (!response.ok) throw new Error("Could not load Drafts.");
         const drafts = await response.json();
-        if (currentMailboxView !== requestedView) return;
+        if (currentMailboxView !== requestedView || requestId !== sentDraftLoadId) return;
         renderMailList({
             title: "📝 Drafts",
             items: drafts,
@@ -1449,7 +1453,7 @@ async function loadDrafts(){
             ]
         });
     } catch(e) {
-        if (currentMailboxView !== requestedView) return;
+        if (currentMailboxView !== requestedView || requestId !== sentDraftLoadId) return;
         renderMailboxLoadStatus("📝 Drafts", "Could not load Drafts. Select Drafts again to try again.");
     }
 }
