@@ -7,6 +7,8 @@ const Downloads = (function () {
   let store = { items: [] };
   let searchQuery = "";
   let activeFilter = "all";
+  let loading = false;
+  let loadError = false;
   let unsubscribeChanged = null;
   let unsubscribeProgress = null;
 
@@ -21,9 +23,18 @@ const Downloads = (function () {
 
   async function refreshStore() {
     const bridge = ensureApi();
-    if (!bridge) return store;
-    const result = await bridge.downloadsGet();
-    if (result && result.success && result.data) store = result.data;
+    loadError = false;
+    if (!bridge) {
+      loadError = true;
+      return store;
+    }
+    try {
+      const result = await bridge.downloadsGet();
+      if (result && result.success && result.data) store = result.data;
+      else loadError = true;
+    } catch (_) {
+      loadError = true;
+    }
     return store;
   }
 
@@ -157,6 +168,19 @@ const Downloads = (function () {
     const list = document.getElementById("dlList");
     const heading = document.getElementById("dlListHeading");
     if (!list) return;
+
+    if (loading || loadError) {
+      if (heading) heading.textContent = "Downloads";
+      list.innerHTML = "";
+      const notice = document.createElement("div");
+      notice.className = "dl-list-empty";
+      notice.setAttribute("role", "status");
+      notice.textContent = loading
+        ? "Loading downloads..."
+        : "Could not load downloads. Close and reopen Downloads to try again.";
+      list.appendChild(notice);
+      return;
+    }
 
     const items = getFilteredItems();
     if (heading) heading.textContent = `Downloads (${items.length})`;
@@ -323,8 +347,11 @@ const Downloads = (function () {
   async function openManager() {
     const manager = document.getElementById("downloadsManager");
     if (!manager) return;
-    await refreshStore();
     manager.classList.add("open");
+    loading = true;
+    renderManager();
+    await refreshStore();
+    loading = false;
     renderManager();
     const search = document.getElementById("dlSearchInput");
     if (search) search.focus();
