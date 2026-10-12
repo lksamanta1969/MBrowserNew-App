@@ -227,7 +227,7 @@ test("8 switching back to failed Tab A shows failure chrome", () => {
   assert.equal(state.ariaInvalid, "true");
 });
 
-test("9 showHome clears loadFailed and failure chrome", () => {
+test("9 showHome hides failure chrome and retains failed page state", () => {
   const h = setup();
   const bt = h.window.BrowserTab;
   bt.navigate("https://example.com/home");
@@ -236,7 +236,7 @@ test("9 showHome clears loadFailed and failure chrome", () => {
   bt.showHome();
   const state = failChrome(h.elements);
   assert.equal(bt.active.home, true);
-  assert.equal(bt.active.loadFailed, false);
+  assert.equal(bt.active.loadFailed, true);
   assert.equal(bt.active.loading, false);
   assert.equal(state.failed, false);
   assert.equal(state.ariaInvalid, "false");
@@ -256,4 +256,61 @@ test("10 missing navReloadBtn must not throw", () => {
     bt.showHome();
   });
   assert.equal(bt.active.loadFailed, false);
+});
+
+
+test("11 hidden page failure stays off Home chrome and returns on Forward", () => {
+  const h = setup();
+  const bt = h.window.BrowserTab;
+  bt.navigate("https://example.com/retained-fail");
+  bt.showHome();
+  bt.active.view.emitLoad("did-fail-load", { errorCode: -2 });
+  assert.equal(bt.active.loadFailed, true);
+  assert.equal(failChrome(h.elements).failed, false);
+  assert.equal(failChrome(h.elements).ariaInvalid, "false");
+  bt.forward();
+  assert.equal(bt.active.home, false);
+  assert.equal(failChrome(h.elements).failed, true);
+  assert.equal(failChrome(h.elements).ariaInvalid, "true");
+  bt.active.view.emitLoad("did-start-loading");
+  assert.equal(failChrome(h.elements).failed, false);
+  assert.equal(failChrome(h.elements).loading, true);
+});
+
+test("12 switching back to a Home tab with hidden failure keeps chrome clear", () => {
+  const h = setup();
+  const bt = h.window.BrowserTab;
+  bt.navigate("https://example.com/hidden-fail");
+  bt.showHome();
+  const tabA = bt.active;
+  bt.create(null, false);
+  tabA.view.emitLoad("did-fail-load", { errorCode: -2 });
+  assert.equal(failChrome(h.elements).failed, false);
+  bt.activate(tabA);
+  assert.equal(tabA.home, true);
+  assert.equal(tabA.loadFailed, true);
+  assert.equal(failChrome(h.elements).failed, false);
+  assert.equal(failChrome(h.elements).ariaInvalid, "false");
+  bt.forward();
+  assert.equal(failChrome(h.elements).failed, true);
+});
+
+
+test("13 failed page Back to Home then Forward preserves failure until retry", () => {
+  const h = setup();
+  const bt = h.window.BrowserTab;
+  bt.navigate("https://example.com/failed");
+  bt.active.view.emitLoad("did-fail-load", { errorCode: -2 });
+  bt.active.view.canGoBack = () => false;
+  bt.back();
+  assert.equal(bt.active.home, true);
+  assert.equal(bt.active.loadFailed, true);
+  assert.equal(failChrome(h.elements).failed, false);
+  bt.forward();
+  assert.equal(bt.active.home, false);
+  assert.equal(failChrome(h.elements).failed, true);
+  assert.equal(failChrome(h.elements).ariaInvalid, "true");
+  bt.active.view.emitLoad("did-start-loading");
+  assert.equal(bt.active.loadFailed, false);
+  assert.equal(failChrome(h.elements).failed, false);
 });

@@ -142,7 +142,7 @@ class BrowserTabs {
         const reloadBtn = document.getElementById("navReloadBtn");
         if (!reloadBtn) return;
         const tab = this.active;
-        const failed = !!(tab && tab.loadFailed);
+        const failed = !!(tab && !tab.home && tab.loadFailed);
         if (reloadBtn.classList && typeof reloadBtn.classList.toggle === "function") {
             reloadBtn.classList.toggle("load-failed", failed);
         }
@@ -202,7 +202,7 @@ class BrowserTabs {
         window.LoginDetection?.deactivate();
         tab.home = true;
         tab.loading = false;
-        tab.loadFailed = false;
+        // Keep the retained page failure for Forward; Home chrome hides it.
         tab.address = "";
         window.onHomePage = true;
         tab.view.style.display = "none";
