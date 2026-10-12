@@ -1,5 +1,6 @@
 ﻿const { app, BrowserWindow, ipcMain, shell, dialog, session, Notification, clipboard } = require("electron");
-const { spawn, execSync } = require("child_process");
+const { execSync } = require("child_process");
+const { createBackendProcess } = require("./server/BackendProcess");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -9,6 +10,16 @@ const { createVaultAccess } = require("./vault/VaultAccess");
 const { normalizeHistoryUrl, isRecordableHistoryUrl } = require("./apps/browser/history-url.cjs");
 
 let shellWebContents = null;
+const backendProcess = createBackendProcess({
+    executable: process.execPath,
+    script: path.join(__dirname, "server.js"),
+    cwd: __dirname,
+    onError(error) {
+        console.error("[SERVER START ERROR]", error);
+        dialog.showErrorBox("MBrowser backend could not start", "Please close MBrowser and try again.");
+        app.quit();
+    }
+});
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -66,10 +77,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
 
-  const serverProcess = spawn("node", ["server.js"], {
-    cwd: __dirname,
-    shell: true
-  });
+  const serverProcess = backendProcess.start();
 
   serverProcess.stdout.on("data", (data) => {
     console.log("[SERVER]", data.toString());
@@ -99,6 +107,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+    backendProcess.stop();
     try {
         flushDownloadsPersist();
     } catch (e) {
