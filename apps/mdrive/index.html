@@ -364,7 +364,28 @@ async function refreshCurrentView({ force = false } = {}) {
     showFiles();
 }
 
-function navigateToPath(pathArray) {
+function writeFolderHistory(replace = false) {
+    const url = new URL(window.location.href);
+    url.hash = "folder=" + encodeURIComponent(currentPath.join("/"));
+    const state = { ...window.history.state, mdrivePath: currentPath.slice() };
+    window.history[replace ? "replaceState" : "pushState"](state, "", url.href);
+}
+
+function initializeFolderHistory() {
+    if (window.location.hash.startsWith("#folder=")) {
+        try {
+            currentPath = decodeURIComponent(window.location.hash.slice(8)).split("/").filter(Boolean);
+        } catch (_) { /* Keep the restored UI path if the URL is malformed. */ }
+    }
+    writeFolderHistory(true);
+    window.addEventListener("popstate", (event) => {
+        if (event.state && Array.isArray(event.state.mdrivePath)) {
+            navigateToPath(event.state.mdrivePath, { recordHistory: false });
+        }
+    });
+}
+
+function navigateToPath(pathArray, { recordHistory = true } = {}) {
     if (folderClickTimer) {
         clearTimeout(folderClickTimer);
         folderClickTimer = null;
@@ -373,7 +394,9 @@ function navigateToPath(pathArray) {
         clearTimeout(fileClickTimer);
         fileClickTimer = null;
     }
+    const changed = currentPath.join("/") !== pathArray.join("/");
     currentPath = pathArray.slice();
+    if (recordHistory && changed) writeFolderHistory();
     selectedFolderPath = null;
     selectedFilePath = null;
     saveUiState();
@@ -693,6 +716,7 @@ function showFiles() {
 }
 
 loadUiState();
+initializeFolderHistory();
 refreshCurrentView({ force: true });
 </script>
 
