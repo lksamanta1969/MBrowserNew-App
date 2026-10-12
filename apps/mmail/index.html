@@ -1380,11 +1380,26 @@ async function saveDraft(){
     }
 }
 
+function renderMailboxLoadStatus(title, message) {
+    const content = document.getElementById("content");
+    if (!content) return;
+    content.innerHTML = "";
+    const heading = document.createElement("h1");
+    heading.textContent = title;
+    const status = document.createElement("p");
+    status.setAttribute("role", "status");
+    status.textContent = message;
+    content.appendChild(heading);
+    content.appendChild(document.createElement("hr"));
+    content.appendChild(status);
+}
+
 async function loadSent(){
     currentMailboxView = "sent";
     setActiveNav("navSent");
     clearSelection();
     const requestedView = currentMailboxView;
+    renderMailboxLoadStatus(currentMailboxView === "sent" ? "📤 Sent Box" : "📝 Drafts", "Loading messages...");
     try {
         const response = await fetch("http://localhost:3000/sent");
         if (currentMailboxView !== requestedView) return;
@@ -1405,7 +1420,7 @@ async function loadSent(){
         });
     } catch(e) {
         if (currentMailboxView !== requestedView) return;
-        alert("Could not load Sent. Please try again.");
+        renderMailboxLoadStatus("📤 Sent Box", "Could not load Sent. Select Sent again to try again.");
     }
 }
 
@@ -1414,6 +1429,7 @@ async function loadDrafts(){
     setActiveNav("navDrafts");
     clearSelection();
     const requestedView = currentMailboxView;
+    renderMailboxLoadStatus(currentMailboxView === "sent" ? "📤 Sent Box" : "📝 Drafts", "Loading messages...");
     try {
         const response = await fetch("http://localhost:3000/draft");
         if (currentMailboxView !== requestedView) return;
@@ -1434,7 +1450,7 @@ async function loadDrafts(){
         });
     } catch(e) {
         if (currentMailboxView !== requestedView) return;
-        alert("Could not load Drafts. Please try again.");
+        renderMailboxLoadStatus("📝 Drafts", "Could not load Drafts. Select Drafts again to try again.");
     }
 }
 async function editDraft(index){
