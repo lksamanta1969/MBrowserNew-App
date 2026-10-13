@@ -85,6 +85,28 @@ const Autofill = createTabService(function (webview, isActive) {
     return originFromUrl(raw) || (isEligibleUrl(raw) ? raw : "");
   }
 
+  /** Guest webview URL origin — authoritative for IPC/inject detection reports. */
+  function getGuestPageOrigin() {
+    if (!webview) return "";
+    try {
+      const guestUrl = webview.getURL ? webview.getURL() : "";
+      return normalizeOriginValue(guestUrl);
+    } catch (e) {
+      return "";
+    }
+  }
+
+  /**
+   * Reject spoofed af:form-detected payloads: reported origin must match the sending guest.
+   */
+  function detectionOriginMatchesGuest(result) {
+    if (!result) return false;
+    const guestOrigin = getGuestPageOrigin();
+    const reportedOrigin = normalizeOriginValue(result.origin || result.url);
+    if (!guestOrigin || !reportedOrigin) return false;
+    return guestOrigin === reportedOrigin;
+  }
+
   function escapeAttr(text) {
     return String(text || "")
       .replace(/&/g, "&amp;")
@@ -436,6 +458,10 @@ const Autofill = createTabService(function (webview, isActive) {
       return;
     }
 
+    if (!detectionOriginMatchesGuest(result)) {
+      return;
+    }
+
     if (lifecycleOfferSuppressed) {
       return;
     }
@@ -615,6 +641,7 @@ const Autofill = createTabService(function (webview, isActive) {
     refreshSettingsFlags,
     refreshNeverSave,
     normalizeOriginValue,
+    detectionOriginMatchesGuest,
     canOfferAutofill,
     lookupOfferCandidates,
     showOfferPrompt,
