@@ -13,8 +13,12 @@ if (app.isPackaged) {
 }
 
 const { createVaultSession } = require("./vault/VaultSession");
-const { isMigrationComplete, deepClone, migrateVault } = require("./vault/VaultMigration");
+const { isMigrationComplete, deepClone, migrateVault, inspectEncryptedVault } = require("./vault/VaultMigration");
 const { createVaultAccess } = require("./vault/VaultAccess");
+const {
+    readPasswordVaultPayload,
+    encryptedVaultBlocksPlaintextSideEffects
+} = require("./vault/VaultAuthority");
 const { normalizeHistoryUrl, isRecordableHistoryUrl } = require("./apps/browser/history-url.cjs");
 
 let shellWebContents = null;
@@ -1817,21 +1821,16 @@ function defaultPasswordsData() {
 
 function readPasswordsStore() {
     const userDataPath = app.getPath("userData");
+    const payload = readPasswordVaultPayload(userDataPath, () => getVaultSession());
 
-    if (isMigrationComplete(userDataPath)) {
-        const session = getVaultSession();
-        if (!session.isUnlocked()) {
-            const error = new Error("Password vault is locked.");
-            error.code = "VAULT_LOCKED";
-            throw error;
-        }
-        const data = session.getDecryptedVault();
-        if (!data) {
-            const error = new Error("Password vault is unavailable.");
-            error.code = "VAULT_UNAVAILABLE";
-            throw error;
-        }
-        return deepClone(data);
+    if (payload) {
+        return payload;
+    }
+
+    if (encryptedVaultBlocksPlaintextSideEffects(userDataPath)) {
+        const error = new Error("Password vault is unavailable.");
+        error.code = "VAULT_UNAVAILABLE";
+        throw error;
     }
 
     const filePath = passwordsFilePath();
@@ -1855,10 +1854,28 @@ function readPasswordsStore() {
 
 async function writePasswordsStore(data) {
     const userDataPath = app.getPath("userData");
+    const encrypted = inspectEncryptedVault(userDataPath);
 
-    if (isMigrationComplete(userDataPath)) {
+    if (encrypted.present) {
+        if (!encrypted.valid) {
+            const error = new Error("Encrypted vault is corrupt or unsupported.");
+            error.code = "VAULT_CORRUPT";
+            throw error;
+        }
         const session = getVaultSession();
-        return session.persistDecryptedVault(data);
+        if (!session.isUnlocked()) {
+            const error = new Error("Password vault is locked.");
+            error.code = "VAULT_LOCKED";
+            throw error;
+        }
+        if (isMigrationComplete(userDataPath)) {
+            return session.persistDecryptedVault(data);
+        }
+        const filePath = passwordsFilePath();
+        const dir = path.dirname(filePath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+        return data;
     }
 
     const filePath = passwordsFilePath();

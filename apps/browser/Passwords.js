@@ -29,7 +29,7 @@ const Passwords = (function () {
   }
 
   function isEncryptedVaultLockedForCrud() {
-    return vaultStatus.migrationState === "complete" && !vaultStatus.unlocked;
+    return !!vaultStatus.encryptedVaultPresent && !vaultStatus.unlocked;
   }
 
   function clearRendererCredentialStore() {
@@ -305,7 +305,7 @@ const Passwords = (function () {
       store = result.data;
       return store;
     }
-    if (result && result.code === "VAULT_LOCKED") {
+    if (result && (result.code === "VAULT_LOCKED" || result.code === "VAULT_CORRUPT")) {
       store = { entries: [] };
       revealedIds = new Set();
       renderManager();

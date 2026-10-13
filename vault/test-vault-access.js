@@ -59,6 +59,13 @@ async function prepareMigratedVault(dir, masterPassword, legacyVault) {
   return session;
 }
 
+async function preparePendingMigration(dir, masterPassword, legacyVault) {
+  writeLegacy(dir, legacyVault);
+  const session = createVaultSession({ userDataPath: dir });
+  await session.setup(masterPassword, masterPassword);
+  return session;
+}
+
 async function testLegacyMatch() {
   const dir = makeTempDir();
   const session = createVaultSession({ userDataPath: dir });
@@ -246,6 +253,46 @@ async function testNoFullVaultCrossesAccessLayer() {
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
+async function testPendingEncryptedLockedDeniesMatchAndRetrieve() {
+  const dir = makeTempDir();
+  const masterPassword = "vault-master";
+  const session = await preparePendingMigration(dir, masterPassword, sampleLegacyVault());
+  session.lock();
+  const access = createAccess(dir, session);
+  const match = access.matchCredentials("https://example.test");
+  const retrieve = access.retrieveCredentialForFill("pw_a", "https://example.test");
+  assert.strictEqual(match.code, ACCESS_ERROR_CODES.VAULT_LOCKED);
+  assert.strictEqual(retrieve.code, ACCESS_ERROR_CODES.VAULT_LOCKED);
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+async function testPendingEncryptedUnlockedUsesLegacy() {
+  const dir = makeTempDir();
+  const masterPassword = "vault-master";
+  const session = await preparePendingMigration(dir, masterPassword, sampleLegacyVault());
+  const access = createAccess(dir, session);
+  const match = access.matchCredentials("https://example.test");
+  const retrieve = access.retrieveCredentialForFill("pw_a", "https://example.test");
+  assert.strictEqual(match.success, true);
+  assert.strictEqual(match.data.matches.length, 1);
+  assert.strictEqual(retrieve.success, true);
+  assert.strictEqual(retrieve.data.username, "user-a");
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+async function testCorruptEncryptedFailsClosedDespiteLegacy() {
+  const dir = makeTempDir();
+  const masterPassword = "vault-master";
+  const session = await preparePendingMigration(dir, masterPassword, sampleLegacyVault());
+  fs.writeFileSync(encryptedVaultPath(dir), "{bad", "utf8");
+  const access = createAccess(dir, session);
+  const match = access.matchCredentials("https://example.test");
+  const retrieve = access.retrieveCredentialForFill("pw_a", "https://example.test");
+  assert.strictEqual(match.code, ACCESS_ERROR_CODES.VAULT_CORRUPT);
+  assert.strictEqual(retrieve.code, ACCESS_ERROR_CODES.VAULT_CORRUPT);
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
 async function testNoSecretLogging() {
   const dir = makeTempDir();
   const logs = [];
@@ -282,6 +329,9 @@ async function run() {
   await testNonexistentId();
   await testInvalidRequest();
   await testEncryptedLocked();
+  await testPendingEncryptedLockedDeniesMatchAndRetrieve();
+  await testPendingEncryptedUnlockedUsesLegacy();
+  await testCorruptEncryptedFailsClosedDespiteLegacy();
   await testEncryptedCorrupt();
   await testEncryptedMissing();
   await testPostMigrationNeverUsesPlaintext();

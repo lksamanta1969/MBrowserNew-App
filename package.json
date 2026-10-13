@@ -11,6 +11,7 @@
     "test:vault-session": "node vault/test-vault-session.js",
     "test:vault-migration": "node vault/test-vault-migration.js",
     "test:vault-access": "node vault/test-vault-access.js",
+    "test:vault-authority": "node vault/test-vault-authority.js",
     "build:win": "electron-builder --win nsis --x64 --publish never",
     "build:dir": "electron-builder --win --x64 --dir --publish never"
   },

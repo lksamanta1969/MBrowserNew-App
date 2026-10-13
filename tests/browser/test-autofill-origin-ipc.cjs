@@ -200,6 +200,24 @@ test("spoofed IPC origin is rejected with no credential lookup", async () => {
   af.dispose(h.guest);
 });
 
+test("vault locked response yields no autofill offer", async () => {
+  const h = setup();
+  const af = h.window.Autofill;
+  await af.init();
+  await af.activate(h.guest);
+  const originalMatch = h.window.electronAPI.passwordsMatch;
+  h.window.electronAPI.passwordsMatch = async () => ({
+    success: false,
+    code: "VAULT_LOCKED",
+    error: "Password vault is locked."
+  });
+  h.resetMatchCalls();
+  await dispatchFormDetected(h.guest, loginFormPayload());
+  assert.equal(h.element("afOfferPrompt").classList.contains("open"), false);
+  h.window.electronAPI.passwordsMatch = originalMatch;
+  af.dispose(h.guest);
+});
+
 test("invalid IPC origin is rejected with no credential lookup", async () => {
   const h = setup();
   const af = h.window.Autofill;

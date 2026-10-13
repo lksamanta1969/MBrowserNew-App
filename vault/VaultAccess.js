@@ -3,15 +3,10 @@
  * Main-process only. Never returns the full vault across the access boundary.
  */
 
-const fs = require("fs");
-const path = require("path");
-
-const { isLegacyPlaintextVault, readEncryptedVaultFile } = require("./VaultCrypto");
 const {
-  isMigrationComplete,
-  legacyVaultPath,
-  encryptedVaultPath
+  isMigrationComplete
 } = require("./VaultMigration");
+const { getAuthoritativePasswordEntries } = require("./VaultAuthority");
 
 const ACCESS_ERROR_CODES = Object.freeze({
   INVALID_REQUEST: "INVALID_REQUEST",
@@ -56,49 +51,8 @@ function normalizePageOrigin(value) {
   return originFromUrl(raw) || (isEligibleHttpUrl(raw) ? raw : "");
 }
 
-function readLegacyEntries(userDataPath) {
-  const filePath = legacyVaultPath(userDataPath);
-  if (!fs.existsSync(filePath)) return [];
-
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
-    if (!isLegacyPlaintextVault(parsed)) return [];
-    return Array.isArray(parsed.entries) ? parsed.entries : [];
-  } catch (error) {
-    return [];
-  }
-}
-
 function getAuthoritativeEntries(userDataPath, getSession, isMigrationCompleteFn) {
-  if (isMigrationCompleteFn(userDataPath)) {
-    const encryptedPath = encryptedVaultPath(userDataPath);
-    if (!fs.existsSync(encryptedPath)) {
-      return fail(ACCESS_ERROR_CODES.VAULT_NOT_FOUND, "Encrypted vault was not found.");
-    }
-
-    try {
-      readEncryptedVaultFile(encryptedPath);
-    } catch (error) {
-      return fail(ACCESS_ERROR_CODES.VAULT_CORRUPT, "Encrypted vault is corrupt or unsupported.");
-    }
-
-    const session = getSession();
-    if (!session || !session.isUnlocked()) {
-      return fail(ACCESS_ERROR_CODES.VAULT_LOCKED, "Password vault is locked.");
-    }
-
-    const data = session.getDecryptedVault();
-    if (!data || !Array.isArray(data.entries)) {
-      return fail(
-        ACCESS_ERROR_CODES.ENCRYPTION_NOT_READY,
-        "Encrypted password vault is unavailable."
-      );
-    }
-
-    return { success: true, entries: data.entries };
-  }
-
-  return { success: true, entries: readLegacyEntries(userDataPath) };
+  return getAuthoritativePasswordEntries(userDataPath, getSession, isMigrationCompleteFn);
 }
 
 function createVaultAccess(options = {}) {

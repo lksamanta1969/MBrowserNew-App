@@ -53,7 +53,7 @@ const LoginDetection = createTabService(function (webview, isActive) {
     const result = await bridge.vaultStatus();
     if (!result || !result.success || !result.data) return false;
 
-    return result.data.migrationState === "complete" && !result.data.unlocked;
+    return !!result.data.encryptedVaultPresent && !result.data.unlocked;
   }
 
   function escapeAttr(text) {

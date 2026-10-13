@@ -414,6 +414,7 @@ module.exports = {
   readMigrationMarker,
   legacyVaultPresent,
   legacyEntryCount,
+  inspectEncryptedVault,
   computeMigrationStatus,
   migrateVault,
   vaultDataEqual,
